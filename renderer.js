@@ -1,4 +1,13 @@
+
 function renderer(vnode, container){
+  if(typeof vnode.tag === 'string'){
+    mountElement(vnode, container)
+  }else if(typeof vnode.tag === 'function'){
+    mountComponent(vnode, container)
+  }
+}
+
+function mountElement(vnode, container){
   const el = document.createElement(vnode.tag)
   for(let prop in vnode.props){
     if(prop.startsWith('on')){
@@ -19,6 +28,10 @@ function renderer(vnode, container){
   container.appendChild(el)
 }
 
+function mountComponent(vnode, container){
+  const subtree = vnode.tag()
+  renderer(subtree, container)
+}
 
 const vnode = {
   tag: 'div',
@@ -28,4 +41,20 @@ const vnode = {
   children: 'click me',
 }
 
+function HelloComponent(){
+  return {
+    tag: 'div',
+    props: {
+      onClick: () => alert('hello world')
+    },
+    children: 'click me',
+  }
+}
+
+
+const component = {
+  tag: HelloComponent
+}
+
 renderer(vnode, document.body)
+renderer(component, document.body)
