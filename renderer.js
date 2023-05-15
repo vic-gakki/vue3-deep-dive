@@ -2,7 +2,7 @@
 function renderer(vnode, container){
   if(typeof vnode.tag === 'string'){
     mountElement(vnode, container)
-  }else if(typeof vnode.tag === 'function'){
+  }else if(typeof vnode.tag === 'object'){
     mountComponent(vnode, container)
   }
 }
@@ -29,7 +29,7 @@ function mountElement(vnode, container){
 }
 
 function mountComponent(vnode, container){
-  const subtree = vnode.tag()
+  const subtree = vnode.tag.render()
   renderer(subtree, container)
 }
 
@@ -41,13 +41,15 @@ const vnode = {
   children: 'click me',
 }
 
-function HelloComponent(){
-  return {
-    tag: 'div',
-    props: {
-      onClick: () => alert('hello world')
-    },
-    children: 'click me',
+const HelloComponent = {
+  render(){
+    return {
+      tag: 'div',
+      props: {
+        onClick: () => alert('hello world')
+      },
+      children: 'click me',
+    }
   }
 }
 
