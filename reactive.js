@@ -1,6 +1,21 @@
 const bucket = new WeakMap()
 let activeEffect = null
 const effectStack  =[]
+// scheduler for multiple-time trigger
+const queue = new Set()
+let isFlushing = false
+const p = Promise.resolve()
+const queueJob = () => {
+  if(isFlushing) return
+  isFlushing = true
+  p.then(() => {
+    queue.forEach(job => job())
+  }).finally(() => {
+    isFlushing = false
+  })
+}
+
+
 const effect = (fn, options = {}) => {
   const effectFn = () => {
     cleanup(effectFn)
@@ -79,9 +94,10 @@ effect(() => {
   console.log(proxyData.count)
 }, {
   scheduler(fn){
-    Promise.resolve().then(fn)
-    // fn()
+    queue.add(fn)
+    queueJob()
   }
 })
-proxyData.count = 2
+proxyData.count++
+proxyData.count++
 console.log('done')
