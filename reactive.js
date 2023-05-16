@@ -106,6 +106,35 @@ const computed = getter => {
   return obj
 }
 
+const watch = (source, cb) => {
+  let getter, oldValue, newValue
+  if(typeof source === 'function'){
+    getter = source
+  }else {
+    getter = () => tranverse(source)
+  }
+  const effectFn = effect(getter, {
+    lazy: true,
+    scheduler(fn){
+      newValue = fn()
+      cb(newValue, oldValue)
+      oldValue = newValue
+    }
+  })
+  oldValue = effectFn()
+}
+
+const tranverse = (source, seen = new Set()) => {
+  if(typeof source !== 'object' || seen.has(source) || !source){
+    return
+  }
+  seen.add(source)
+  for(let k in source){
+    tranverse(source[k], seen)
+  }
+  return source
+}
+
 
 const data = {foo: 1, bar: 2}
 const proxyData = new Proxy(data, {
@@ -121,24 +150,30 @@ const proxyData = new Proxy(data, {
 })
 
 
-const sum = computed(() => {
-  console.log('executed')
-  return proxyData.foo + proxyData.bar
-})
+// const sum = computed(() => {
+//   console.log('executed')
+//   return proxyData.foo + proxyData.bar
+// })
 
-console.log(sum.value)
-console.log(sum.value)
+// console.log(sum.value)
+// console.log(sum.value)
 
-proxyData.foo++
+// proxyData.foo++
 
-console.log(sum.value)
+// console.log(sum.value)
 
-const sum2 = computed(() => {
-  return proxyData.foo + proxyData.bar
-})
+// const sum2 = computed(() => {
+//   return proxyData.foo + proxyData.bar
+// })
 
-effect(() => {
-  console.log('sum value',sum2.value)
+// effect(() => {
+//   console.log('sum value',sum2.value)
+// })
+
+// proxyData.foo++
+
+watch(proxyData, (newVal, oldVal) => {
+  console.log('change', newVal, oldVal)
 })
 
 proxyData.foo++
