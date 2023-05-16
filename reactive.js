@@ -87,7 +87,10 @@ const computed = getter => {
   const effectFn = effect(getter, {
     lazy: true,
     scheduler(){
-      dirty = true
+      if(!dirty){
+        dirty = true
+        trigger(obj, 'value')
+      }
     }
   })
   const obj = {
@@ -96,6 +99,7 @@ const computed = getter => {
         value = effectFn()
         dirty = false
       }
+      track(obj, 'value')
       return value
     }
   }
@@ -128,3 +132,13 @@ console.log(sum.value)
 proxyData.foo++
 
 console.log(sum.value)
+
+const sum2 = computed(() => {
+  return proxyData.foo + proxyData.bar
+})
+
+effect(() => {
+  console.log('sum value',sum2.value)
+})
+
+proxyData.foo++
