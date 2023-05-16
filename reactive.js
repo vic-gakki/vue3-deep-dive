@@ -1,4 +1,4 @@
-const bucket = new Set()
+const bucket = new WeakMap()
 let activeEffect = null
 const effect = fn => {
   activeEffect = fn
@@ -7,14 +7,28 @@ const effect = fn => {
 const data = {text: 'hello world'}
 const proxyData = new Proxy(data, {
   get(target, key){
-    if(activeEffect){
-      bucket.add(activeEffect)
+    if(!activeEffect){
+      return target[key]
     }
+    const depsMap = bucket.get(target)
+    if(!depsMap){
+      bucket.set(target, (depsMap = new Map()))
+    }
+    const effect = depsMap.get(key)
+    if(!effect){
+      depsMap.set(key, (effect = new Set()))
+    }
+    effect.add(activeEffect)
     return target[key]
   },
   set(target, key, value){
     target[key] = value
-    bucket.forEach(fn => fn())
+    const depsMap = bucket.get(target)
+    if(!depsMap){
+      return true
+    }
+    const effect = depsMap.get(key)
+    effect && effect.forEach(fn => fn())
     return true
   }
 })
