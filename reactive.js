@@ -106,22 +106,37 @@ const computed = getter => {
   return obj
 }
 
-const watch = (source, cb) => {
+const watch = (source, cb, options = {}) => {
   let getter, oldValue, newValue
+  const {immediate, flush} = options
   if(typeof source === 'function'){
     getter = source
   }else {
     getter = () => tranverse(source)
   }
+
+  const job = () => {
+    newValue = effectFn()
+    cb(newValue, oldValue)
+    oldValue = newValue
+  }
+
   const effectFn = effect(getter, {
     lazy: true,
-    scheduler(fn){
-      newValue = fn()
-      cb(newValue, oldValue)
-      oldValue = newValue
+    scheduler(){
+      if(flush === 'post'){
+        Promise.resolve().then(job)
+      }else {
+        job()
+      }
     }
   })
-  oldValue = effectFn()
+
+  if(immediate){
+    job()
+  }else {
+    oldValue = effectFn()
+  }
 }
 
 const tranverse = (source, seen = new Set()) => {
@@ -174,6 +189,10 @@ const proxyData = new Proxy(data, {
 
 watch(proxyData, (newVal, oldVal) => {
   console.log('change', newVal, oldVal)
+}, {
+  immediate: true,
+  flush: 'post'
 })
 
 proxyData.foo++
+console.log('done')
