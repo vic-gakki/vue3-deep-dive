@@ -43,14 +43,19 @@ const trigger = (target, key) => {
   if(!depsMap){
     return
   }
-  const effect = depsMap.get(key)
+  const effect = depsMap.get(key) || []
   // make a copy to avoid infinite loop -> when executing effect fn, it will do cleanup and recollect during foreach statement and will cause infinite loop
-  const effectToRun = new Set(effect) 
+  const effectToRun = []
+  effect.forEach(fn => {
+    if(fn !== activeEffect){
+      effectToRun.push(fn)
+    }
+  })
   effectToRun.forEach(fn => fn())
 }
 
 
-const data = {foo: 'foo', bar: 'bar'}
+const data = {count: 1}
 const proxyData = new Proxy(data, {
   get(target, key){
     track(target, key)
@@ -64,19 +69,6 @@ const proxyData = new Proxy(data, {
 })
 
 effect(() => {
-  let temp1, temp2
-  console.log('outer effect executed');
-  effect(() => {
-    console.log('inner effect executed')
-    temp2 = proxyData.bar
-  })
-  temp1 = proxyData.foo
+  console.log('executed');
+  proxyData.count++
 })
-
-
-setTimeout(() => {
-  proxyData.foo = 'foo modified'
-}, 1000)
-setTimeout(() => {
-  proxyData.bar = 'bar modified'
-}, 2000)
