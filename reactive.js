@@ -1,8 +1,20 @@
 const bucket = new WeakMap()
 let activeEffect = null
 const effect = fn => {
-  activeEffect = fn
-  fn()
+  const effectFn = () => {
+    cleanup(effectFn)
+    activeEffect = effectFn
+    fn()
+  }
+  effectFn.deps = []
+  effectFn()
+}
+
+const cleanup = (effectFn) => {
+  for(let dep of effectFn.deps){
+    dep.delete(effectFn)
+  }
+  effectFn.deps.length = []
 }
 
 const track = (target, key) => {
@@ -17,6 +29,7 @@ const track = (target, key) => {
   if(!effect){
     depsMap.set(key, (effect = new Set()))
   }
+  activeEffect.deps.push(effect)
   effect.add(activeEffect)
 }
 
@@ -27,11 +40,13 @@ const trigger = (target, key) => {
     return
   }
   const effect = depsMap.get(key)
-  effect && effect.forEach(fn => fn())
+  // make a copy to avoid infinite loop -> when executing effect fn, it will do cleanup and recollect during foreach statement and will cause infinite loop
+  const effectToRun = new Set(effect) 
+  effectToRun.forEach(fn => fn())
 }
 
 
-const data = {text: 'hello world'}
+const data = {text: 'hello world', ok: true}
 const proxyData = new Proxy(data, {
   get(target, key){
     track(target, key)
@@ -46,9 +61,14 @@ const proxyData = new Proxy(data, {
 
 effect(() => {
   console.log('executed');
-  document.body.innerHTML = proxyData.text
+  document.body.innerHTML = proxyData.ok ? proxyData.text : 'not relevant'
 })
 
+
 setTimeout(() => {
-  proxyData.noExist = 'hello vue3'
+  proxyData.ok = false
+}, 1000)
+
+setTimeout(() => {
+  proxyData.text = 'hello vue3'
 }, 2000)
