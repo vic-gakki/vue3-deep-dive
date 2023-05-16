@@ -21,13 +21,17 @@ const effect = (fn, options = {}) => {
     cleanup(effectFn)
     activeEffect = effectFn
     effectStack.push(activeEffect)
-    fn()
+    const res = fn()
     effectStack.pop()
     activeEffect = effectStack[effectStack.length - 1]
+    return res
   }
   effectFn.deps = []
   effectFn.options = options
-  effectFn()
+  if(!options.lazy){
+    effectFn()
+  }
+  return effectFn
 }
 
 const cleanup = (effectFn) => {
@@ -77,7 +81,29 @@ const trigger = (target, key) => {
 }
 
 
-const data = {count: 1}
+const computed = getter => {
+  let value
+  let dirty = true
+  const effectFn = effect(getter, {
+    lazy: true,
+    scheduler(){
+      dirty = true
+    }
+  })
+  const obj = {
+    get value(){
+      if(dirty){
+        value = effectFn()
+        dirty = false
+      }
+      return value
+    }
+  }
+  return obj
+}
+
+
+const data = {foo: 1, bar: 2}
 const proxyData = new Proxy(data, {
   get(target, key){
     track(target, key)
@@ -90,14 +116,15 @@ const proxyData = new Proxy(data, {
   }
 })
 
-effect(() => {
-  console.log(proxyData.count)
-}, {
-  scheduler(fn){
-    queue.add(fn)
-    queueJob()
-  }
+
+const sum = computed(() => {
+  console.log('executed')
+  return proxyData.foo + proxyData.bar
 })
-proxyData.count++
-proxyData.count++
-console.log('done')
+
+console.log(sum.value)
+console.log(sum.value)
+
+proxyData.foo++
+
+console.log(sum.value)
