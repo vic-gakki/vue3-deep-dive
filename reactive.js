@@ -1,10 +1,14 @@
 const bucket = new WeakMap()
 let activeEffect = null
+const effectStack  =[]
 const effect = fn => {
   const effectFn = () => {
     cleanup(effectFn)
     activeEffect = effectFn
+    effectStack.push(activeEffect)
     fn()
+    effectStack.pop()
+    activeEffect = effectStack[effectStack.length - 1]
   }
   effectFn.deps = []
   effectFn()
@@ -46,7 +50,7 @@ const trigger = (target, key) => {
 }
 
 
-const data = {text: 'hello world', ok: true}
+const data = {foo: 'foo', bar: 'bar'}
 const proxyData = new Proxy(data, {
   get(target, key){
     track(target, key)
@@ -60,15 +64,19 @@ const proxyData = new Proxy(data, {
 })
 
 effect(() => {
-  console.log('executed');
-  document.body.innerHTML = proxyData.ok ? proxyData.text : 'not relevant'
+  let temp1, temp2
+  console.log('outer effect executed');
+  effect(() => {
+    console.log('inner effect executed')
+    temp2 = proxyData.bar
+  })
+  temp1 = proxyData.foo
 })
 
 
 setTimeout(() => {
-  proxyData.ok = false
+  proxyData.foo = 'foo modified'
 }, 1000)
-
 setTimeout(() => {
-  proxyData.text = 'hello vue3'
+  proxyData.bar = 'bar modified'
 }, 2000)
