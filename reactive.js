@@ -158,11 +158,16 @@ const tranverse = (source, seen = new Set()) => {
 }
 
 
-const data = {foo: 1, bar: 2}
+const data = { 
+  foo: 1, 
+  get bar(){
+    return this.foo
+  }
+}
 const proxyData = new Proxy(data, {
-  get(target, key){
+  get(target, key, receiver){
     track(target, key)
-    return target[key]
+    return Reflect.get(target, key, receiver)
   },
   set(target, key, value){
     target[key] = value
@@ -204,18 +209,24 @@ const proxyData = new Proxy(data, {
 // proxyData.foo++
 // console.log('done')
 
-let finalData
-watch(proxyData, async (newVal, oldVal, onInvalidate) => {
-  let expired = false
-  onInvalidate(() => {
-    expired = true
-  })
-  const res = await sleepRandom()
-  if(!expired){
-    finalData = res
-  }
-  console.log({finalData});
-})
+// let finalData
+// watch(proxyData, async (newVal, oldVal, onInvalidate) => {
+//   let expired = false
+//   onInvalidate(() => {
+//     expired = true
+//   })
+//   const res = await sleepRandom()
+//   if(!expired){
+//     finalData = res
+//   }
+//   console.log({finalData});
+// })
 
-proxyData.foo++
+// proxyData.foo++
+// proxyData.foo++
+
+
+effect(() => {
+  console.log(proxyData.bar)
+})
 proxyData.foo++
