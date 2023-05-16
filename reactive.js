@@ -4,31 +4,42 @@ const effect = fn => {
   activeEffect = fn
   fn()
 }
+
+const track = (target, key) => {
+  if(!activeEffect){
+    return
+  }
+  let depsMap = bucket.get(target)
+  if(!depsMap){
+    bucket.set(target, (depsMap = new Map()))
+  }
+  let effect = depsMap.get(key)
+  if(!effect){
+    depsMap.set(key, (effect = new Set()))
+  }
+  effect.add(activeEffect)
+}
+
+
+const trigger = (target, key) => {
+  const depsMap = bucket.get(target)
+  if(!depsMap){
+    return
+  }
+  const effect = depsMap.get(key)
+  effect && effect.forEach(fn => fn())
+}
+
+
 const data = {text: 'hello world'}
 const proxyData = new Proxy(data, {
   get(target, key){
-    if(!activeEffect){
-      return target[key]
-    }
-    const depsMap = bucket.get(target)
-    if(!depsMap){
-      bucket.set(target, (depsMap = new Map()))
-    }
-    const effect = depsMap.get(key)
-    if(!effect){
-      depsMap.set(key, (effect = new Set()))
-    }
-    effect.add(activeEffect)
+    track(target, key)
     return target[key]
   },
   set(target, key, value){
     target[key] = value
-    const depsMap = bucket.get(target)
-    if(!depsMap){
-      return true
-    }
-    const effect = depsMap.get(key)
-    effect && effect.forEach(fn => fn())
+    trigger(target, key)
     return true
   }
 })
@@ -39,5 +50,5 @@ effect(() => {
 })
 
 setTimeout(() => {
-  proxyData.text = 'hello vue3'
+  proxyData.noExist = 'hello vue3'
 }, 2000)
