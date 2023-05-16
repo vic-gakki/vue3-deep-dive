@@ -1,7 +1,7 @@
 const bucket = new WeakMap()
 let activeEffect = null
 const effectStack  =[]
-const effect = fn => {
+const effect = (fn, options = {}) => {
   const effectFn = () => {
     cleanup(effectFn)
     activeEffect = effectFn
@@ -11,6 +11,7 @@ const effect = fn => {
     activeEffect = effectStack[effectStack.length - 1]
   }
   effectFn.deps = []
+  effectFn.options = options
   effectFn()
 }
 
@@ -51,7 +52,13 @@ const trigger = (target, key) => {
       effectToRun.push(fn)
     }
   })
-  effectToRun.forEach(fn => fn())
+  effectToRun.forEach(fn => {
+    if(fn.options?.scheduler){
+      fn.options.scheduler(fn)
+    }else {
+      fn()
+    }
+  })
 }
 
 
@@ -69,6 +76,12 @@ const proxyData = new Proxy(data, {
 })
 
 effect(() => {
-  console.log('executed');
-  proxyData.count++
+  console.log(proxyData.count)
+}, {
+  scheduler(fn){
+    Promise.resolve().then(fn)
+    // fn()
+  }
 })
+proxyData.count = 2
+console.log('done')
