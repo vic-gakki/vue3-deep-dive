@@ -1,3 +1,5 @@
+import {sleepRandom} from './util.js'
+
 const bucket = new WeakMap()
 let activeEffect = null
 const effectStack  =[]
@@ -107,7 +109,7 @@ const computed = getter => {
 }
 
 const watch = (source, cb, options = {}) => {
-  let getter, oldValue, newValue
+  let getter, oldValue, newValue, cleanup
   const {immediate, flush} = options
   if(typeof source === 'function'){
     getter = source
@@ -115,9 +117,14 @@ const watch = (source, cb, options = {}) => {
     getter = () => tranverse(source)
   }
 
+  const onInvalidate = fn => {
+    cleanup = fn
+  }
+
   const job = () => {
     newValue = effectFn()
-    cb(newValue, oldValue)
+    cleanup && cleanup()
+    cb(newValue, oldValue, onInvalidate)
     oldValue = newValue
   }
 
@@ -187,12 +194,28 @@ const proxyData = new Proxy(data, {
 
 // proxyData.foo++
 
-watch(proxyData, (newVal, oldVal) => {
-  console.log('change', newVal, oldVal)
-}, {
-  immediate: true,
-  flush: 'post'
+// watch(proxyData, (newVal, oldVal) => {
+//   console.log('change', newVal, oldVal)
+// }, {
+//   immediate: true,
+//   flush: 'post'
+// })
+
+// proxyData.foo++
+// console.log('done')
+
+let finalData
+watch(proxyData, async (newVal, oldVal, onInvalidate) => {
+  let expired = false
+  onInvalidate(() => {
+    expired = true
+  })
+  const res = await sleepRandom()
+  if(!expired){
+    finalData = res
+  }
+  console.log({finalData});
 })
 
 proxyData.foo++
-console.log('done')
+proxyData.foo++
