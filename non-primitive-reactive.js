@@ -53,7 +53,7 @@ const createReactive = (obj, isShallow = false, isReadonly = false) => {
       if(key === RAW_KEY){
         return target
       }
-      if(!isReadonly){
+      if(!isReadonly && typeof key !== 'symbol'){
         track(target, key)
       }
       const res = Reflect.get(target, key, receiver)
@@ -148,13 +148,24 @@ const createReactive = (obj, isShallow = false, isReadonly = false) => {
 
 // obj2.length = 0
 
-const obj = reactive(['foo'])
+// const obj = reactive(['foo'])
+// effect(() => {
+//   console.log('start');
+//   for(let key in obj){
+//     console.log(key)
+//   }
+// })
+
+// obj[1] = 'bar'
+// obj.length = 0
+
+const arr = reactive([1,2,3,4,5])
 effect(() => {
   console.log('start');
-  for(let key in obj){
-    console.log(key)
+  for(const val of arr){
+    console.log(val)
   }
 })
 
-obj[1] = 'bar'
-obj.length = 0
+arr[1] = 0
+arr.length = 2
