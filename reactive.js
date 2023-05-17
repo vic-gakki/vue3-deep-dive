@@ -169,10 +169,14 @@ const proxyData = new Proxy(data, {
     track(target, key)
     return Reflect.get(target, key, receiver)
   },
-  set(target, key, value){
-    target[key] = value
+  set(target, key, value, receiver){
+    const res = Reflect.set(target, key, value, receiver)
     trigger(target, key)
-    return true
+    return res
+  },
+  has(target, key){
+    track(target, key)
+    return Reflect.has(target, key)
   }
 })
 
@@ -226,7 +230,14 @@ const proxyData = new Proxy(data, {
 // proxyData.foo++
 
 
+// effect(() => {
+//   console.log(proxyData.bar)
+// })
+// proxyData.foo++
+
 effect(() => {
-  console.log(proxyData.bar)
+  console.log('executed')
+  'foo' in proxyData
 })
+
 proxyData.foo++
