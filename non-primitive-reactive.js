@@ -30,3 +30,18 @@
  *  proxy用来自定义内部方法和行为的拦截函数名字（与上对应）
  *   get set deleteProperty getPrototypeOf setPrototypeOf isExtensible preventExtensions getOwnPropertyDescriptor defineProperty has ownKeys apply construct
  */
+
+
+import { handler, effect } from "./reactive.js";
+
+const reactive = obj => {
+  return new Proxy(obj, handler)
+}
+
+const obj = reactive({foo: NaN})
+
+effect(() => {
+  console.log(obj.foo)
+})
+
+obj.foo = NaN

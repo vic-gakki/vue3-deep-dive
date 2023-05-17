@@ -172,20 +172,19 @@ const tranverse = (source, seen = new Set()) => {
   return source
 }
 
-
-const data = { 
-  foo: 1, 
-  bar: 'bar'
-}
-const proxyData = new Proxy(data, {
+const handler = {
   get(target, key, receiver){
     track(target, key)
     return Reflect.get(target, key, receiver)
   },
   set(target, key, value, receiver){
+    const oldVal = target[key]
     const type = Object.prototype.hasOwnProperty.call(target, key) ? TRIGGER_TYPE.SET : TRIGGER_TYPE.ADD
     const res = Reflect.set(target, key, value, receiver)
-    trigger(target, key, type)
+    // exclude NaN !== NaN
+    if(oldVal !== value && (oldVal === oldVal || value === value)){
+      trigger(target, key, type)
+    }
     return res
   },
   has(target, key){
@@ -204,7 +203,14 @@ const proxyData = new Proxy(data, {
     }
     return res
   }
-})
+}
+
+
+const data = { 
+  foo: 1, 
+  bar: 'bar'
+}
+const proxyData = new Proxy(data, handler)
 
 
 // const sum = computed(() => {
@@ -261,11 +267,23 @@ const proxyData = new Proxy(data, {
 // })
 // proxyData.foo++
 
-effect(() => {
-  console.log('executed')
-  for(let key in proxyData){
-    console.log({key})
-  }
-})
+// effect(() => {
+//   console.log('executed')
+//   for(let key in proxyData){
+//     console.log({key})
+//   }
+// })
 
-delete proxyData.bar
+// delete proxyData.bar
+
+
+
+
+export {
+  handler,
+  effect,
+  track,
+  trigger,
+  computed,
+  watch
+}
