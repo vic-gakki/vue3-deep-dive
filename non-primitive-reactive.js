@@ -33,6 +33,7 @@
 
 
 import { handler, effect, RAW_KEY, TRIGGER_TYPE, ITERATE_KEY, track, trigger, disableTrack, enableTrack } from "./reactive.js";
+import { isMap, isSet } from "./util.js";
 const reactiveMap = new Map()
 
 
@@ -56,6 +57,25 @@ const arrayInstrumentations = {}
     return res
   }
 })
+
+const mutableInstrumentations = {
+  add(key){
+      const target = this[RAW_KEY]
+      const hasKey = target.has(key)
+      const res = target.add(key)
+      !hasKey && trigger(target, ITERATE_KEY, TRIGGER_TYPE.ADD )
+      return res
+  },
+  delete(key){
+    const target = this[RAW_KEY]
+    const hasKey = target.has(key)
+    const res = target.delete(key)
+    hasKey && trigger(target, ITERATE_KEY, TRIGGER_TYPE.DELETE )
+    return res
+  }
+}
+
+
 
 const reactive = obj => {
   return createReactive(obj)
@@ -82,6 +102,14 @@ const createReactive = (obj, isShallow = false, isReadonly = false) => {
       }
       if(Array.isArray(target) && arrayInstrumentations.hasOwnProperty(key)){
         return Reflect.get(arrayInstrumentations, key, receiver)
+      }
+      if(isSet(target)){
+        if(key === 'size'){
+          track(target, ITERATE_KEY)
+          return Reflect.get(target, key, target)
+        }else {
+          return Reflect.get(mutableInstrumentations, key, receiver)
+        }
       }
       if(!isReadonly && typeof key !== 'symbol'){
         track(target, key)
@@ -216,11 +244,18 @@ const createReactive = (obj, isShallow = false, isReadonly = false) => {
 // })
 
 
-const arr = reactive([])
+// const arr = reactive([])
 
+// effect(() => {
+//   arr.push(1)
+// })
+// effect(() => {
+//   arr.push(2)
+// })
+
+const p = reactive(new Set())
 effect(() => {
-  arr.push(1)
+  console.log(p.size)
 })
-effect(() => {
-  arr.push(2)
-})
+p.add(1)
+p.add(1)

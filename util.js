@@ -15,7 +15,24 @@ const sleepRandom = async () => {
   return n
 }
 
+const toString = obj => {
+  return Object.prototype.toString.call(obj).slice(8, -1)
+}
+
+const isTypeFactory = (name) => (obj) => toString(obj) === name
+
+const isArray = isTypeFactory('Array')
+const isSet = isTypeFactory('Set')
+const isMap = isTypeFactory('Map')
+const isWeakMap = isTypeFactory('WeakMap')
+const isWeakSet = isTypeFactory('WeakSet')
+
 export {
   sleep,
-  sleepRandom
+  sleepRandom,
+  isArray,
+  isSet,
+  isMap,
+  isWeakMap,
+  isWeakSet
 }
