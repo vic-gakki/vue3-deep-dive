@@ -293,5 +293,6 @@ export {
   trigger,
   computed,
   watch,
-  RAW_KEY
+  RAW_KEY,
+  TRIGGER_TYPE
 }

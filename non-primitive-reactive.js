@@ -32,21 +32,95 @@
  */
 
 
-import { handler, effect } from "./reactive.js";
+import { handler, effect, RAW_KEY, TRIGGER_TYPE, track, trigger } from "./reactive.js";
 
 const reactive = obj => {
-  return new Proxy(obj, handler)
+  return createReactive(obj)
+}
+const shallowReactive = obj => {
+  return createReactive(obj, true)
+}
+const readonly = obj => {
+  return createReactive(obj, false, true)
+}
+const shallowReadonly = obj => {
+  return createReactive(obj, true, true)
 }
 
-const child = {}
-const parent = {bar: 'bar'}
-const childP = reactive(child)
-const parentP = reactive(parent)
-Object.setPrototypeOf(childP, parentP)
+const createReactive = (obj, isShallow = false, isReadonly = false) => {
+  return new Proxy(obj, {
+    get(target, key, receiver){
+      if(key === RAW_KEY){
+        return target
+      }
+      if(!isReadonly){
+        track(target, key)
+      }
+      const res = Reflect.get(target, key, receiver)
+      if(isShallow){
+        return res
+      }
+      if(typeof res === 'object' && res !== null){
+        return isReadonly ? readonly(res) : reactive(res)
+      }
+      return res
+    },
+    set(target, key, value, receiver){
+      if(isReadonly){
+        console.warn(`Prop ${key} is readonly`)
+        return true
+      }
+      const oldVal = target[key]
+      const type = Object.prototype.hasOwnProperty.call(target, key) ? TRIGGER_TYPE.SET : TRIGGER_TYPE.ADD
+      const res = Reflect.set(target, key, value, receiver)
+      // exclude NaN !== NaN
+      if(receiver[RAW_KEY] === target){ // set will trigger prototype [[set]] method
+        if(oldVal !== value && (oldVal === oldVal || value === value)){
+          trigger(target, key, type)
+        }
+      }
+      return res
+    },
+    has(target, key){
+      track(target, key)
+      return Reflect.has(target, key)
+    },
+    ownKeys(target){
+      track(target, ITERATE_KEY)
+      return Reflect.ownKeys(target)
+    },
+    deleteProperty(target, key){
+      if(isReadonly){
+        console.warn(`Prop ${key} is readonly`)
+        return true
+      }
+      const hasKey = Object.prototype.hasOwnProperty.call(target, key)
+      const res = Reflect.deleteProperty(target, key)
+      if(res && hasKey){
+        trigger(target, key, TRIGGER_TYPE.DELETE)
+      }
+      return res
+    }
+  })
+}
 
+// const child = {}
+// const parent = {bar: 'bar'}
+// const childP = reactive(child)
+// const parentP = reactive(parent)
+// Object.setPrototypeOf(childP, parentP)
+
+
+// effect(() => {
+//   console.log(childP.bar)
+// })
+
+// childP.bar = 'another'
+
+const obj = reactive({foo: {bar: 'bar'}})
 
 effect(() => {
-  console.log(childP.bar)
+  console.log(obj.foo.bar)
 })
 
 childP.bar = 'another'
