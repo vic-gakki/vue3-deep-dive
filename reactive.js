@@ -24,6 +24,8 @@ const TRIGGER_TYPE = {
   DELETE: 'DELETE'
 }
 
+const RAW_KEY = '__raw__'
+
 
 const effect = (fn, options = {}) => {
   const effectFn = () => {
@@ -174,6 +176,9 @@ const tranverse = (source, seen = new Set()) => {
 
 const handler = {
   get(target, key, receiver){
+    if(key === RAW_KEY){
+      return target
+    }
     track(target, key)
     return Reflect.get(target, key, receiver)
   },
@@ -182,8 +187,10 @@ const handler = {
     const type = Object.prototype.hasOwnProperty.call(target, key) ? TRIGGER_TYPE.SET : TRIGGER_TYPE.ADD
     const res = Reflect.set(target, key, value, receiver)
     // exclude NaN !== NaN
-    if(oldVal !== value && (oldVal === oldVal || value === value)){
-      trigger(target, key, type)
+    if(receiver[RAW_KEY] === target){ // set will trigger prototype [[set]] method
+      if(oldVal !== value && (oldVal === oldVal || value === value)){
+        trigger(target, key, type)
+      }
     }
     return res
   },
@@ -285,5 +292,6 @@ export {
   track,
   trigger,
   computed,
-  watch
+  watch,
+  RAW_KEY
 }

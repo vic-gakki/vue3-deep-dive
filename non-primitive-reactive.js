@@ -38,10 +38,15 @@ const reactive = obj => {
   return new Proxy(obj, handler)
 }
 
-const obj = reactive({foo: NaN})
+const child = {}
+const parent = {bar: 'bar'}
+const childP = reactive(child)
+const parentP = reactive(parent)
+Object.setPrototypeOf(childP, parentP)
+
 
 effect(() => {
-  console.log(obj.foo)
+  console.log(childP.bar)
 })
 
-obj.foo = NaN
+childP.bar = 'another'
