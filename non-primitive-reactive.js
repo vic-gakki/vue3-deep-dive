@@ -32,7 +32,7 @@
  */
 
 
-import { handler, effect, RAW_KEY, TRIGGER_TYPE, track, trigger } from "./reactive.js";
+import { handler, effect, RAW_KEY, TRIGGER_TYPE, ITERATE_KEY, track, trigger } from "./reactive.js";
 
 const reactive = obj => {
   return createReactive(obj)
@@ -92,7 +92,7 @@ const createReactive = (obj, isShallow = false, isReadonly = false) => {
       return Reflect.has(target, key)
     },
     ownKeys(target){
-      track(target, ITERATE_KEY)
+      track(target, Array.isArray(target) ? 'length' : ITERATE_KEY)
       return Reflect.ownKeys(target)
     },
     deleteProperty(target, key){
@@ -132,18 +132,29 @@ const createReactive = (obj, isShallow = false, isReadonly = false) => {
 // childP.bar = 'another'
 
 
-const obj = reactive(['foo'])
+// const obj = reactive(['foo'])
 
+// effect(() => {
+//   console.log(obj.length)
+// })
+
+// obj[1] = 'bar'
+
+// const obj2 = reactive(['foo'])
+
+// effect(() => {
+//   console.log(obj2[0])
+// })
+
+// obj2.length = 0
+
+const obj = reactive(['foo'])
 effect(() => {
-  console.log(obj.length)
+  console.log('start');
+  for(let key in obj){
+    console.log(key)
+  }
 })
 
 obj[1] = 'bar'
-
-const obj2 = reactive(['foo'])
-
-effect(() => {
-  console.log(obj2[0])
-})
-
-obj2.length = 0
+obj.length = 0

@@ -100,7 +100,7 @@ const trigger = (target, key, type = TRIGGER_TYPE.SET, value) => {
   }
   if(Array.isArray(target) && key === 'length'){
     depsMap.forEach((effect, key) => {
-      if(+key >= value){
+      if(key >= value){
         effect.forEach(fn => {
           if(fn !== activeEffect){
             effectToRun.add(fn)
@@ -313,5 +313,6 @@ export {
   computed,
   watch,
   RAW_KEY,
-  TRIGGER_TYPE
+  TRIGGER_TYPE,
+  ITERATE_KEY
 }
