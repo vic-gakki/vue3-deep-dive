@@ -17,6 +17,13 @@ const queueJob = () => {
   })
 }
 
+const ITERATE_KEY = Symbol()
+const TRIGGER_TYPE = {
+  ADD: 'ADD',
+  SET: 'SET',
+  DELETE: 'DELETE'
+}
+
 
 const effect = (fn, options = {}) => {
   const effectFn = () => {
@@ -60,7 +67,7 @@ const track = (target, key) => {
 }
 
 
-const trigger = (target, key) => {
+const trigger = (target, key, type = TRIGGER_TYPE.SET) => {
   const depsMap = bucket.get(target)
   if(!depsMap){
     return
@@ -73,6 +80,14 @@ const trigger = (target, key) => {
       effectToRun.push(fn)
     }
   })
+  if(type === TRIGGER_TYPE.ADD){
+    const iterateEffect = depsMap.get(ITERATE_KEY) || []
+    iterateEffect.forEach(fn => {
+      if(fn !== activeEffect){
+        effectToRun.push(fn)
+      }
+    })
+  }
   effectToRun.forEach(fn => {
     if(fn.options?.scheduler){
       fn.options.scheduler(fn)
@@ -160,9 +175,6 @@ const tranverse = (source, seen = new Set()) => {
 
 const data = { 
   foo: 1, 
-  get bar(){
-    return this.foo
-  }
 }
 const proxyData = new Proxy(data, {
   get(target, key, receiver){
@@ -170,13 +182,18 @@ const proxyData = new Proxy(data, {
     return Reflect.get(target, key, receiver)
   },
   set(target, key, value, receiver){
+    const type = Object.prototype.hasOwnProperty.call(target, key) ? TRIGGER_TYPE.SET : TRIGGER_TYPE.ADD
     const res = Reflect.set(target, key, value, receiver)
-    trigger(target, key)
+    trigger(target, key, type)
     return res
   },
   has(target, key){
     track(target, key)
     return Reflect.has(target, key)
+  },
+  ownKeys(target){
+    track(target, ITERATE_KEY)
+    return Reflect.ownKeys(target)
   }
 })
 
@@ -237,7 +254,9 @@ const proxyData = new Proxy(data, {
 
 effect(() => {
   console.log('executed')
-  'foo' in proxyData
+  for(let key in proxyData){
+    console.log({key})
+  }
 })
 
-proxyData.foo++
+proxyData.bar = 'bar'
