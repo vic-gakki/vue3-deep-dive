@@ -80,7 +80,7 @@ const trigger = (target, key, type = TRIGGER_TYPE.SET) => {
       effectToRun.push(fn)
     }
   })
-  if(type === TRIGGER_TYPE.ADD){
+  if([TRIGGER_TYPE.ADD, TRIGGER_TYPE.DELETE].includes(type)){
     const iterateEffect = depsMap.get(ITERATE_KEY) || []
     iterateEffect.forEach(fn => {
       if(fn !== activeEffect){
@@ -175,6 +175,7 @@ const tranverse = (source, seen = new Set()) => {
 
 const data = { 
   foo: 1, 
+  bar: 'bar'
 }
 const proxyData = new Proxy(data, {
   get(target, key, receiver){
@@ -194,6 +195,14 @@ const proxyData = new Proxy(data, {
   ownKeys(target){
     track(target, ITERATE_KEY)
     return Reflect.ownKeys(target)
+  },
+  deleteProperty(target, key){
+    const hasKey = Object.prototype.hasOwnProperty.call(target, key)
+    const res = Reflect.deleteProperty(target, key)
+    if(res && hasKey){
+      trigger(target, key, TRIGGER_TYPE.DELETE)
+    }
+    return res
   }
 })
 
@@ -259,4 +268,4 @@ effect(() => {
   }
 })
 
-proxyData.bar = 'bar'
+delete proxyData.bar
