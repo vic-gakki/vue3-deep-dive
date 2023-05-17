@@ -2,6 +2,7 @@ import {sleepRandom} from './util.js'
 
 const bucket = new WeakMap()
 let activeEffect = null
+let shouldTrack = true
 const effectStack  =[]
 // scheduler for multiple-time trigger
 const queue = new Set()
@@ -53,7 +54,7 @@ const cleanup = (effectFn) => {
 }
 
 const track = (target, key) => {
-  if(!activeEffect){
+  if(!activeEffect || !shouldTrack){
     return
   }
   let depsMap = bucket.get(target)
@@ -232,6 +233,13 @@ const handler = {
 }
 
 
+const disableTrack = () => {
+  shouldTrack = false
+}
+const enableTrack = () => {
+  shouldTrack = true
+}
+
 const data = { 
   foo: 1, 
   bar: 'bar'
@@ -314,5 +322,7 @@ export {
   watch,
   RAW_KEY,
   TRIGGER_TYPE,
-  ITERATE_KEY
+  ITERATE_KEY,
+  disableTrack,
+  enableTrack
 }
