@@ -71,12 +71,18 @@ const createReactive = (obj, isShallow = false, isReadonly = false) => {
         return true
       }
       const oldVal = target[key]
-      const type = Object.prototype.hasOwnProperty.call(target, key) ? TRIGGER_TYPE.SET : TRIGGER_TYPE.ADD
+      const type = Array.isArray(target) 
+                    ? +key < target.length 
+                      ? TRIGGER_TYPE.SET 
+                      : TRIGGER_TYPE.ADD 
+                    : Object.prototype.hasOwnProperty.call(target, key) 
+                      ? TRIGGER_TYPE.SET 
+                      : TRIGGER_TYPE.ADD
       const res = Reflect.set(target, key, value, receiver)
       // exclude NaN !== NaN
       if(receiver[RAW_KEY] === target){ // set will trigger prototype [[set]] method
         if(oldVal !== value && (oldVal === oldVal || value === value)){
-          trigger(target, key, type)
+          trigger(target, key, type, value)
         }
       }
       return res
@@ -117,10 +123,27 @@ const createReactive = (obj, isShallow = false, isReadonly = false) => {
 
 // childP.bar = 'another'
 
-const obj = reactive({foo: {bar: 'bar'}})
+// const obj = reactive({foo: {bar: 'bar'}})
+
+// effect(() => {
+//   console.log(obj.foo.bar)
+// })
+
+// childP.bar = 'another'
+
+
+const obj = reactive(['foo'])
 
 effect(() => {
-  console.log(obj.foo.bar)
+  console.log(obj.length)
 })
 
-childP.bar = 'another'
+obj[1] = 'bar'
+
+const obj2 = reactive(['foo'])
+
+effect(() => {
+  console.log(obj2[0])
+})
+
+obj2.length = 0

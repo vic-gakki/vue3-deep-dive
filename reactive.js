@@ -69,24 +69,43 @@ const track = (target, key) => {
 }
 
 
-const trigger = (target, key, type = TRIGGER_TYPE.SET) => {
+const trigger = (target, key, type = TRIGGER_TYPE.SET, value) => {
   const depsMap = bucket.get(target)
   if(!depsMap){
     return
   }
   const effect = depsMap.get(key) || []
   // make a copy to avoid infinite loop -> when executing effect fn, it will do cleanup and recollect during foreach statement and will cause infinite loop
-  const effectToRun = []
+  const effectToRun = new Set()
   effect.forEach(fn => {
     if(fn !== activeEffect){
-      effectToRun.push(fn)
+      effectToRun.add(fn)
     }
   })
   if([TRIGGER_TYPE.ADD, TRIGGER_TYPE.DELETE].includes(type)){
     const iterateEffect = depsMap.get(ITERATE_KEY) || []
     iterateEffect.forEach(fn => {
       if(fn !== activeEffect){
-        effectToRun.push(fn)
+        effectToRun.add(fn)
+      }
+    })
+  }
+  if(type === TRIGGER_TYPE.ADD && Array.isArray(target)){
+    const lengthEffect = depsMap.get('length') || []
+    lengthEffect.forEach(fn => {
+      if(fn !== activeEffect){
+        effectToRun.add(fn)
+      }
+    })
+  }
+  if(Array.isArray(target) && key === 'length'){
+    depsMap.forEach((effect, key) => {
+      if(+key >= value){
+        effect.forEach(fn => {
+          if(fn !== activeEffect){
+            effectToRun.add(fn)
+          }
+        })
       }
     })
   }
