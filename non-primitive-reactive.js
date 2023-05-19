@@ -33,7 +33,7 @@
 
 
 import { handler, effect, RAW_KEY, TRIGGER_TYPE, ITERATE_KEY, track, trigger, disableTrack, enableTrack } from "./reactive.js";
-import { isMap, isSet } from "./util.js";
+import { isMap, isSet, isSame } from "./util.js";
 const reactiveMap = new Map()
 
 
@@ -63,15 +63,36 @@ const mutableInstrumentations = {
       const target = this[RAW_KEY]
       const hasKey = target.has(key)
       const res = target.add(key)
-      !hasKey && trigger(target, ITERATE_KEY, TRIGGER_TYPE.ADD )
+      !hasKey && trigger(target, key, TRIGGER_TYPE.ADD )
       return res
   },
   delete(key){
     const target = this[RAW_KEY]
     const hasKey = target.has(key)
     const res = target.delete(key)
-    hasKey && trigger(target, ITERATE_KEY, TRIGGER_TYPE.DELETE )
+    hasKey && trigger(target, key, TRIGGER_TYPE.DELETE )
     return res
+  },
+  get(key){
+    const target = this[RAW_KEY]
+    const has = target.has(key)
+    track(target, key)
+    if(has){
+      const res = target.get(key)
+      return typeof res === 'object' ? reactive(res) : res
+    }
+  },
+  set(key, value){
+    const target = this[RAW_KEY]
+    const has = target.has(key)
+    const oldValue = target.get(key)
+    value = value[RAW_KEY] || value
+    target.set(key, value)
+    if(!has){
+      trigger(target, key, TRIGGER_TYPE.ADD)
+    }else if(!isSame(oldValue, value)){
+      trigger(target, key, TRIGGER_TYPE.SET)
+    }
   }
 }
 
@@ -103,7 +124,7 @@ const createReactive = (obj, isShallow = false, isReadonly = false) => {
       if(Array.isArray(target) && arrayInstrumentations.hasOwnProperty(key)){
         return Reflect.get(arrayInstrumentations, key, receiver)
       }
-      if(isSet(target)){
+      if(isSet(target) || isMap(target)){
         if(key === 'size'){
           track(target, ITERATE_KEY)
           return Reflect.get(target, key, target)
@@ -139,7 +160,7 @@ const createReactive = (obj, isShallow = false, isReadonly = false) => {
       const res = Reflect.set(target, key, value, receiver)
       // exclude NaN !== NaN
       if(receiver[RAW_KEY] === target){ // set will trigger prototype [[set]] method
-        if(oldVal !== value && (oldVal === oldVal || value === value)){
+        if(!isSame(oldVal, value)){
           trigger(target, key, type, value)
         }
       }
@@ -253,9 +274,21 @@ const createReactive = (obj, isShallow = false, isReadonly = false) => {
 //   arr.push(2)
 // })
 
-const p = reactive(new Set())
+// const p = reactive(new Set())
+// effect(() => {
+//   console.log(p.size)
+// })
+// p.add(1)
+// p.add(1)
+
+
+const m = new Map()
+const p1 = reactive(m)
+const p2 = reactive(new Map())
+p1.set('p2', p2)
+
 effect(() => {
-  console.log(p.size)
+  console.log(m.get('p2').size)
 })
-p.add(1)
-p.add(1)
+
+m.get('p2').set('foo', 1)

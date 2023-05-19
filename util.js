@@ -27,6 +27,10 @@ const isMap = isTypeFactory('Map')
 const isWeakMap = isTypeFactory('WeakMap')
 const isWeakSet = isTypeFactory('WeakSet')
 
+const isSame = (oldVal, newVal) => {
+  return (oldVal === newVal) || (oldVal !== oldVal && newVal !== newVal)
+}
+
 export {
   sleep,
   sleepRandom,
@@ -34,5 +38,6 @@ export {
   isSet,
   isMap,
   isWeakMap,
-  isWeakSet
+  isWeakSet,
+  isSame
 }
