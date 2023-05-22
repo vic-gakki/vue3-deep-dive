@@ -93,6 +93,14 @@ const mutableInstrumentations = {
     }else if(!isSame(oldValue, value)){
       trigger(target, key, TRIGGER_TYPE.SET)
     }
+  },
+  forEach(callback, thisArg){
+    const target = this[RAW_KEY]
+    const wrap = val => (typeof val === 'object' && val !== null) ? reactive(val) : val
+    track(target, ITERATE_KEY)
+    target.forEach((value, key) => {
+      callback.call(thisArg, wrap(value), wrap(key), this)
+    })
   }
 }
 
@@ -282,13 +290,55 @@ const createReactive = (obj, isShallow = false, isReadonly = false) => {
 // p.add(1)
 
 
-const m = new Map()
-const p1 = reactive(m)
-const p2 = reactive(new Map())
-p1.set('p2', p2)
+// const m = new Map()
+// const p1 = reactive(m)
+// const p2 = reactive(new Map())
+// p1.set('p2', p2)
+
+// effect(() => {
+//   console.log(m.get('p2').size)
+// })
+
+// m.get('p2').set('foo', 1)
+
+
+const map = reactive(new Map([
+  [{key: 1}, {value: 1}]
+]))
 
 effect(() => {
-  console.log(m.get('p2').size)
+  map.forEach((value, key, map) => {
+    console.log(key, value)
+  })
 })
 
-m.get('p2').set('foo', 1)
+map.set({key: 2}, {value: 2})
+
+
+// 传递给forEach callback的参数也是响应式
+const key = {key: 1}
+const value = new Set([1,2,3])
+const p = reactive(new Map([
+  [key, value]
+]))
+
+effect(() => {
+  p.forEach((value, key, map) => {
+    console.log(value.size)
+  })
+})
+
+p.get(key).delete(1)
+
+
+const p1 = reactive(new Map([
+  ['key', 1]
+]))
+
+effect(() => {
+  p1.forEach((value, key) => {
+    console.log(value)
+  })
+})
+
+p1.set('key', 2)

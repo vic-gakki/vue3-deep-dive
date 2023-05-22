@@ -1,4 +1,4 @@
-import {sleepRandom} from './util.js'
+import {isMap, sleepRandom} from './util.js'
 
 const bucket = new WeakMap()
 let activeEffect = null
@@ -83,7 +83,7 @@ const trigger = (target, key, type = TRIGGER_TYPE.SET, value) => {
       effectToRun.add(fn)
     }
   })
-  if([TRIGGER_TYPE.ADD, TRIGGER_TYPE.DELETE].includes(type)){
+  if([TRIGGER_TYPE.ADD, TRIGGER_TYPE.DELETE].includes(type) || (type === TRIGGER_TYPE.SET && isMap(target))){
     const iterateEffect = depsMap.get(ITERATE_KEY) || []
     iterateEffect.forEach(fn => {
       if(fn !== activeEffect){
