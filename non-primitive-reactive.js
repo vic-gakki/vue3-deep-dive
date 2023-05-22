@@ -101,7 +101,29 @@ const mutableInstrumentations = {
     target.forEach((value, key) => {
       callback.call(thisArg, wrap(value), wrap(key), this)
     })
-  }
+  },
+  [Symbol.iterator]: iterationMethod,
+  entries: iterationMethod
+}
+
+
+function iterationMethod() {
+  const target = this[RAW_KEY]
+    const itr = target[Symbol.iterator]()
+    const wrap = val => (typeof val === 'object' && val !== null) ? reactive(val) : val
+    track(target, ITERATE_KEY)
+    return {
+      next(){
+        const {value, done} = itr.next()
+        return {
+          value: value ? [wrap(value[0]), wrap(value[1])] : value,
+          done
+        }
+      },
+      [Symbol.iterator](){
+        return this
+      }
+    }
 }
 
 
@@ -302,43 +324,62 @@ const createReactive = (obj, isShallow = false, isReadonly = false) => {
 // m.get('p2').set('foo', 1)
 
 
-const map = reactive(new Map([
-  [{key: 1}, {value: 1}]
-]))
+// const map = reactive(new Map([
+//   [{key: 1}, {value: 1}]
+// ]))
 
-effect(() => {
-  map.forEach((value, key, map) => {
-    console.log(key, value)
-  })
-})
+// effect(() => {
+//   map.forEach((value, key, map) => {
+//     console.log(key, value)
+//   })
+// })
 
-map.set({key: 2}, {value: 2})
+// map.set({key: 2}, {value: 2})
 
 
 // 传递给forEach callback的参数也是响应式
-const key = {key: 1}
-const value = new Set([1,2,3])
+// const key = {key: 1}
+// const value = new Set([1,2,3])
+// const p = reactive(new Map([
+//   [key, value]
+// ]))
+
+// effect(() => {
+//   p.forEach((value, key, map) => {
+//     console.log(value.size)
+//   })
+// })
+
+// p.get(key).delete(1)
+
+
+// const p1 = reactive(new Map([
+//   ['key', 1]
+// ]))
+
+// effect(() => {
+//   p1.forEach((value, key) => {
+//     console.log(value)
+//   })
+// })
+
+// p1.set('key', 2)
+
+
 const p = reactive(new Map([
-  [key, value]
+  ['key1', 'value1'],
+  ['key2', 'value2'],
 ]))
 
 effect(() => {
-  p.forEach((value, key, map) => {
-    console.log(value.size)
-  })
+  for(const [key, value] of p){
+    console.log(key, value)
+  }
 })
-
-p.get(key).delete(1)
-
-
-const p1 = reactive(new Map([
-  ['key', 1]
-]))
-
 effect(() => {
-  p1.forEach((value, key) => {
-    console.log(value)
-  })
+  for(const [key, value] of p.entries()){
+    console.log(key, value)
+  }
 })
 
-p1.set('key', 2)
+p.set('key3', 'value3')
