@@ -19,6 +19,7 @@ const queueJob = () => {
 }
 
 const ITERATE_KEY = Symbol()
+const MAP_KEY_ITERATE_KEY = Symbol()
 const TRIGGER_TYPE = {
   ADD: 'ADD',
   SET: 'SET',
@@ -85,6 +86,14 @@ const trigger = (target, key, type = TRIGGER_TYPE.SET, value) => {
   })
   if([TRIGGER_TYPE.ADD, TRIGGER_TYPE.DELETE].includes(type) || (type === TRIGGER_TYPE.SET && isMap(target))){
     const iterateEffect = depsMap.get(ITERATE_KEY) || []
+    iterateEffect.forEach(fn => {
+      if(fn !== activeEffect){
+        effectToRun.add(fn)
+      }
+    })
+  }
+  if([TRIGGER_TYPE.ADD, TRIGGER_TYPE.DELETE].includes(type) && isMap(target)){
+    const iterateEffect = depsMap.get(MAP_KEY_ITERATE_KEY) || []
     iterateEffect.forEach(fn => {
       if(fn !== activeEffect){
         effectToRun.add(fn)
@@ -322,6 +331,7 @@ export {
   watch,
   RAW_KEY,
   TRIGGER_TYPE,
+  MAP_KEY_ITERATE_KEY,
   ITERATE_KEY,
   disableTrack,
   enableTrack

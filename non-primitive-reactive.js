@@ -32,7 +32,7 @@
  */
 
 
-import { handler, effect, RAW_KEY, TRIGGER_TYPE, ITERATE_KEY, track, trigger, disableTrack, enableTrack } from "./reactive.js";
+import { handler, effect, RAW_KEY, TRIGGER_TYPE, ITERATE_KEY, track, trigger, disableTrack, enableTrack, MAP_KEY_ITERATE_KEY } from "./reactive.js";
 import { isMap, isSet, isSame } from "./util.js";
 const reactiveMap = new Map()
 
@@ -103,20 +103,42 @@ const mutableInstrumentations = {
     })
   },
   [Symbol.iterator]: iterationMethod,
-  entries: iterationMethod
+  entries: iterationMethod,
+  values: keyValueIterationMethod('values'),
+  keys: keyValueIterationMethod('keys')
 }
 
 
 function iterationMethod() {
   const target = this[RAW_KEY]
-    const itr = target[Symbol.iterator]()
+  const itr = target[Symbol.iterator]()
+  const wrap = val => (typeof val === 'object' && val !== null) ? reactive(val) : val
+  track(target, ITERATE_KEY)
+  return {
+    next(){
+      const {value, done} = itr.next()
+      return {
+        value: value ? [wrap(value[0]), wrap(value[1])] : value,
+        done
+      }
+    },
+    [Symbol.iterator](){
+      return this
+    }
+  }
+}
+
+function keyValueIterationMethod(method){
+  return function(){
+    const target = this[RAW_KEY]
+    const itr = target[method]()
     const wrap = val => (typeof val === 'object' && val !== null) ? reactive(val) : val
-    track(target, ITERATE_KEY)
+    track(target, method === 'keys' ? MAP_KEY_ITERATE_KEY : ITERATE_KEY)
     return {
       next(){
         const {value, done} = itr.next()
         return {
-          value: value ? [wrap(value[0]), wrap(value[1])] : value,
+          value: value ? wrap(value) : value,
           done
         }
       },
@@ -124,7 +146,9 @@ function iterationMethod() {
         return this
       }
     }
+  }
 }
+
 
 
 
@@ -366,20 +390,44 @@ const createReactive = (obj, isShallow = false, isReadonly = false) => {
 // p1.set('key', 2)
 
 
+// const p = reactive(new Map([
+//   ['key1', 'value1'],
+//   ['key2', 'value2'],
+// ]))
+
+// effect(() => {
+//   for(const [key, value] of p){
+//     console.log(key, value)
+//   }
+// })
+// effect(() => {
+//   for(const [key, value] of p.entries()){
+//     console.log(key, value)
+//   }
+// })
+
+// p.set('key3', 'value3')
+
 const p = reactive(new Map([
   ['key1', 'value1'],
-  ['key2', 'value2'],
+  ['key2', 'value2']
 ]))
 
 effect(() => {
-  for(const [key, value] of p){
-    console.log(key, value)
-  }
-})
-effect(() => {
-  for(const [key, value] of p.entries()){
-    console.log(key, value)
+  for(const key of p.values()){
+    console.log(key)
   }
 })
 
+
+// key didn't change, so the effect should not be triggered
+effect(() => {
+  for(const key of p.keys()){
+    console.log(key)
+  }
+})
+
+
+
+p.set('key2', 'key2 mod')
 p.set('key3', 'value3')
