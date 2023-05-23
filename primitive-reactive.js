@@ -15,9 +15,53 @@ const ref = val => {
   return reactive(wrapper)
 }
 
-const s = ref('hello')
-effect(() => {
-  console.log(s.value)
-})
+const toRef = (obj, key) => {
+  const wrapper = {
+    get value(){
+      return obj[key]
+    },
+    set value(val){
+      obj[key] = val
+    }
+  }
+  Object.defineProperty(wrapper, REF_KEY, {
+    value: true
+  })
+  return wrapper
+}
 
-s.value = 'vue3'
+const toRefs = obj => {
+  let ret = {}
+  for(const key in obj){
+    ret[key] = toRef(obj, key)
+  }
+  return ret
+}
+
+
+
+
+// const s = ref('hello')
+// effect(() => {
+//   console.log(s.value)
+// })
+
+// s.value = 'vue3'
+
+
+// losing reactivity
+const obj = reactive({foo: 'foo', bar: 'bar'})
+// const newObj = {...obj}
+// const newObj = {
+//   foo: toRef(obj, 'foo'),
+//   bar: toRef(obj, 'bar')
+// }
+// const newObj = toRef(obj, 'foo')
+const newObj = {...toRefs(obj)}
+effect(() => {
+  // console.log(newObj.foo, newObj.bar)
+  console.log(newObj.foo.value, newObj.bar.value)
+  // console.log(newObj.value)
+})
+obj.foo = 1
+obj.bar = 2
