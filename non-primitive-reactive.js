@@ -408,26 +408,34 @@ const createReactive = (obj, isShallow = false, isReadonly = false) => {
 
 // p.set('key3', 'value3')
 
-const p = reactive(new Map([
-  ['key1', 'value1'],
-  ['key2', 'value2']
-]))
+// const p = reactive(new Map([
+//   ['key1', 'value1'],
+//   ['key2', 'value2']
+// ]))
 
-effect(() => {
-  for(const key of p.values()){
-    console.log(key)
-  }
-})
-
-
-// key didn't change, so the effect should not be triggered
-effect(() => {
-  for(const key of p.keys()){
-    console.log(key)
-  }
-})
+// effect(() => {
+//   for(const key of p.values()){
+//     console.log(key)
+//   }
+// })
 
 
+// // key didn't change, so the effect should not be triggered
+// effect(() => {
+//   for(const key of p.keys()){
+//     console.log(key)
+//   }
+// })
 
-p.set('key2', 'key2 mod')
-p.set('key3', 'value3')
+
+
+// p.set('key2', 'key2 mod')
+// p.set('key3', 'value3')
+
+
+export {
+  reactive,
+  shallowReactive,
+  readonly,
+  shallowReadonly
+}
