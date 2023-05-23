@@ -34,6 +34,7 @@
 
 import { handler, effect, RAW_KEY, TRIGGER_TYPE, ITERATE_KEY, track, trigger, disableTrack, enableTrack, MAP_KEY_ITERATE_KEY } from "./reactive.js";
 import { isMap, isSet, isSame } from "./util.js";
+import { REF_KEY } from "./primitive-reactive.js";
 const reactiveMap = new Map()
 
 
@@ -190,6 +191,9 @@ const createReactive = (obj, isShallow = false, isReadonly = false) => {
         track(target, key)
       }
       const res = Reflect.get(target, key, receiver)
+      if(res[REF_KEY]){
+        return res.value
+      }
       if(isShallow){
         return res
       }
