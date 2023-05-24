@@ -51,9 +51,25 @@ const createRenderer = (options) => {
   }
 
   const patch = (n1, n2, container) => {
-    if(!n1){
-      mountElement(n2, container)
+    if(n1 && n1.type !== n2.type){
+      unmount(n1)
+      n1 = null
     }
+    const {type} = n2
+    if(typeof type === 'string'){
+      if(!n1){
+        mountElement(n2, container)
+      }else {
+        patchElement(p1, p2)
+      }
+    }else if(isObject(type)){
+      if(!n1){
+        mountComponent(n2, container)
+      }else {
+        patchComponent(p1, p2)
+      }
+    }
+    
   }
 
   const mountElement = (vnode, container) => {
@@ -76,6 +92,17 @@ const createRenderer = (options) => {
     remove(vnode.el, parent)
   }
 
+  const patchElement = () => {
+
+  }
+
+  const mountComponent = () => {
+
+  }
+
+  const patchComponent = () => {
+    
+  }
 
 
   return {
