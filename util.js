@@ -26,6 +26,7 @@ const isSet = isTypeFactory('Set')
 const isMap = isTypeFactory('Map')
 const isWeakMap = isTypeFactory('WeakMap')
 const isWeakSet = isTypeFactory('WeakSet')
+const isObject = isTypeFactory('Object')
 
 const isSame = (oldVal, newVal) => {
   return (oldVal === newVal) || (oldVal !== oldVal && newVal !== newVal)
@@ -39,5 +40,6 @@ export {
   isMap,
   isWeakMap,
   isWeakSet,
-  isSame
+  isSame,
+  isObject
 }

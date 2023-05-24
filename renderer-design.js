@@ -15,7 +15,7 @@
 // import { effect } from "./reactive.js";
 // import { ref } from "./primitive-reactive.js";
 
-import { isArray } from "./util.js"
+import { isArray, isObject} from "./util.js"
 // const {effect, ref} = VueReactivity
 
 // const renderer = (domstring, contaienr) => {
@@ -84,8 +84,10 @@ const renderer = createRenderer({
     parent.insertBefore(node, anchor)
   },
   patchProps(node, key, oldValue, newValue){
-    // 优先在dom props上设置
-    if(shouldSetAsProps(node, key, newValue)){
+    if(key === 'class'){
+      // 为元素设置class的三种方法：setAttribute, el.className, el.classList, className性能最优
+      node.className = newValue | ''
+    }else if (shouldSetAsProps(node, key, newValue)){ // 优先在dom props上设置
       const type = typeof node[key]
       if(type === 'boolean' && newValue === ''){
        node[key] = true
@@ -106,6 +108,21 @@ const shouldSetAsProps = (el, key, value) => {
   return key in el
 }
 
+const normalizeClass = classVal => {
+  if(typeof classVal === 'string'){
+    return classVal
+  }else if(isObject(classVal)){
+    return Object.entries(classVal).filter(([key, value]) => value).map(([key, value]) => key).join(' ')
+  }else if(isArray(classVal)){
+    return classVal.reduce((acc, cur) => {
+      acc += ` ${normalizeClass(cur)}`
+      return acc
+    }, '')
+  }
+}
+
+
+console.log(normalizeClass(['foo bar', {baz: true}]))
 
 const vnode = {
   type: 'h1',
