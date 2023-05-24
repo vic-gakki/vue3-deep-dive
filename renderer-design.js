@@ -32,29 +32,32 @@ import { isArray, isObject} from "./util.js"
 
 
 const createRenderer = (options) => {
-  const { insert, setElementText, createElement, patchProps } = options
+  const { insert, setElementText, createElement, patchProps, remove } = options
+
   const render = (vnode, container) => {
     if(vnode){
       patch(container._vnode, vnode, container)
     }else{
       if(container._vnode){
-        // unmount
-        container.innerHTML = ''
-        container._vnode = null
+        // unmount, 直接设置innerHtml，不能检测里面的组件继而不能出发组件的生命周期hook，不能检测dom上的指令生命周期hook，不能移除事件
+        unmount(container._vnode)
       }
     }
     container._vnode = vnode
   }
+
   const hydrate = (vnode, container) => {
 
   }
+
   const patch = (n1, n2, container) => {
     if(!n1){
       mountElement(n2, container)
     }
   }
+
   const mountElement = (vnode, container) => {
-    const el = createElement(vnode.type)
+    const el = vnode.el = createElement(vnode.type)
     if(typeof vnode.children === 'string'){
       setElementText(el, vnode.children)
     }else if(isArray(vnode.children)){
@@ -67,6 +70,14 @@ const createRenderer = (options) => {
     }
     insert(el, container)
   }
+
+  const unmount = (vnode) => {
+    const parent = vnode.el.parentNode
+    remove(vnode.el, parent)
+  }
+
+
+
   return {
     render,
     hydrate
@@ -86,7 +97,7 @@ const renderer = createRenderer({
   patchProps(node, key, oldValue, newValue){
     if(key === 'class'){
       // 为元素设置class的三种方法：setAttribute, el.className, el.classList, className性能最优
-      node.className = newValue | ''
+      node.className = newValue || ''
     }else if (shouldSetAsProps(node, key, newValue)){ // 优先在dom props上设置
       const type = typeof node[key]
       if(type === 'boolean' && newValue === ''){
@@ -97,6 +108,9 @@ const renderer = createRenderer({
     }else {
       node.setAttribute(key, newValue)
     }
+  },
+  remove(el, container){
+    container && container.removeChild(el)
   }
 })
 
@@ -122,13 +136,11 @@ const normalizeClass = classVal => {
 }
 
 
-console.log(normalizeClass(['foo bar', {baz: true}]))
-
 const vnode = {
   type: 'h1',
   props: {
     id: 'id',
-    class: 'class'
+    class: normalizeClass(['foo bar', {baz: true}])
   },
   children: 'hello'
 }
