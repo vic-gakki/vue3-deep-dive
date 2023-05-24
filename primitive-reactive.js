@@ -85,22 +85,26 @@ const proxyRefs = obj => {
 // obj.bar = 2
 
 
-const obj = reactive({foo: 1, bar: 2})
-const newObj = proxyRefs(toRefs(obj))
-effect(() => {
-  console.log(newObj.foo, newObj.bar)
-})
-obj.foo = 11
-obj.bar = 22
+// const obj = reactive({foo: 1, bar: 2})
+// const newObj = proxyRefs(toRefs(obj))
+// effect(() => {
+//   console.log(newObj.foo, newObj.bar)
+// })
+// obj.foo = 11
+// obj.bar = 22
 
-let count = ref(0)
-const ro = reactive({count})
-effect(() => {
-  console.log(ro.count)
-})
-count.value = 1
+// let count = ref(0)
+// const ro = reactive({count})
+// effect(() => {
+//   console.log(ro.count)
+// })
+// count.value = 1
 
 
 export {
-  REF_KEY
+  REF_KEY,
+  ref,
+  toRef,
+  toRefs,
+  proxyRefs
 }
