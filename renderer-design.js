@@ -16,7 +16,7 @@
 // import { ref } from "./primitive-reactive.js";
 
 import { isArray, isObject} from "./util.js"
-// const {effect, ref} = VueReactivity
+const {effect, ref} = VueReactivity
 
 // const renderer = (domstring, contaienr) => {
 //   contaienr.innerHTML = domstring
@@ -60,13 +60,13 @@ const createRenderer = (options) => {
       if(!n1){
         mountElement(n2, container)
       }else {
-        patchElement(p1, p2)
+        patchElement(n1, n2)
       }
     }else if(isObject(type)){
       if(!n1){
         mountComponent(n2, container)
       }else {
-        patchComponent(p1, p2)
+        patchComponent(n1, n2)
       }
     }
     
@@ -87,13 +87,25 @@ const createRenderer = (options) => {
     insert(el, container)
   }
 
+  const patchElement = (n1, n2) => {
+    const el = n2.el = n1.el
+    const len = n2.children?.length || 0
+    for(const key in n2.props){
+      patchProps(el, key, n1.props[key], n2.props[key])
+    }
+    for(const key in n1.props){
+      if(!(key in n2.props)){
+        patchProps(el, key, n1.props[key], null)
+      }
+    }
+    for(let i = 0; i < len; i++){
+      patch(n1.children[i], n2.children[i], el)
+    }
+  }
+
   const unmount = (vnode) => {
     const parent = vnode.el.parentNode
     remove(vnode.el, parent)
-  }
-
-  const patchElement = () => {
-
   }
 
   const mountComponent = () => {
@@ -132,12 +144,14 @@ const renderer = createRenderer({
         if(!invoker){
           invoker = node._vel[key] = e => {
             // 同一事件多个回调
+            if(e.timeStamp < invoker.attached) return
             if(isArray(invoker.value)){
               invoker.value.forEach(fn => fn(e))
             }else {
               invoker.value(e)
             }
           }
+          invoker.attached = performance.now()
           node.addEventListener(eventName, invoker)
         }
         invoker.value = newValue
@@ -185,17 +199,51 @@ const normalizeClass = classVal => {
 }
 
 
-const vnode = {
-  type: 'h1',
-  props: {
-    id: 'id',
-    class: normalizeClass(['foo bar', {baz: true}]),
-    onClick: e => {
-      console.log('click', e)
-    },
-    onDblClick: [e => {console.log('double click one', e)}, e => {console.log('double click two', e)}]
-  },
-  children: 'hello'
-}
+// const vnode = {
+//   type: 'h1',
+//   props: {
+//     id: 'id',
+//     class: normalizeClass(['foo bar', {baz: true}]),
+//     onClick: e => {
+//       console.log('click', e)
+//     },
+//     onDblClick: [e => {console.log('double click one', e)}, e => {console.log('double click two', e)}]
+//   },
+//   children: 'hello'
+// }
 
-renderer.render(vnode, document.getElementById('app'))
+// renderer.render(vnode, document.getElementById('app'))
+
+
+
+
+/**
+ * 事件冒泡与更新机制问题
+ * 当点击子元素后，触发回调，响应式数据更新，触发重新渲染，给父元素绑定事件，然后事件冒泡触发
+ * 
+ * 我们无法知道事件冒泡是否完成，以及完成到什么程度
+ * 
+ * 即便vue的更新时机是在异步的微任务队列中，但是微任务会穿插在由事件冒泡触发的多个事件处理函数之间执行 
+ */
+const bool = ref(false)
+effect(() => {
+  const vnode = {
+    type: 'div',
+    props: bool.value ? {
+      onClick: e => {
+        console.log('parent get clicked', e)
+      }
+    } : {},
+    children: [{
+      type: 'p',
+      children: 'click me',
+      props: {
+        onClick(e){
+          console.log('son get clicked', e)
+          bool.value = true
+        }
+      }
+    }]
+  }
+  renderer.render(vnode, document.getElementById('app'))
+})
