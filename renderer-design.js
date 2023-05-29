@@ -122,7 +122,29 @@ const renderer = createRenderer({
     parent.insertBefore(node, anchor)
   },
   patchProps(node, key, oldValue, newValue){
-    if(key === 'class'){
+    // 事件的处理
+    if(/^on/.test(key)){
+      const eventName = key.slice(2).toLowerCase()
+      // 多个不同事件的绑定处理
+      const invokers = node._vel || (node._vel = {})
+      let invoker = invokers[key]
+      if(newValue){
+        if(!invoker){
+          invoker = node._vel[key] = e => {
+            // 同一事件多个回调
+            if(isArray(invoker.value)){
+              invoker.value.forEach(fn => fn(e))
+            }else {
+              invoker.value(e)
+            }
+          }
+          node.addEventListener(eventName, invoker)
+        }
+        invoker.value = newValue
+      }else if(invoker){
+        node.removeEventListener(eventName, invoker)
+      }
+    }else if(key === 'class'){
       // 为元素设置class的三种方法：setAttribute, el.className, el.classList, className性能最优
       node.className = newValue || ''
     }else if (shouldSetAsProps(node, key, newValue)){ // 优先在dom props上设置
@@ -167,7 +189,11 @@ const vnode = {
   type: 'h1',
   props: {
     id: 'id',
-    class: normalizeClass(['foo bar', {baz: true}])
+    class: normalizeClass(['foo bar', {baz: true}]),
+    onClick: e => {
+      console.log('click', e)
+    },
+    onDblClick: [e => {console.log('double click one', e)}, e => {console.log('double click two', e)}]
   },
   children: 'hello'
 }
