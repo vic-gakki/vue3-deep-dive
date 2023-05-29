@@ -89,17 +89,43 @@ const createRenderer = (options) => {
 
   const patchElement = (n1, n2) => {
     const el = n2.el = n1.el
-    const len = n2.children?.length || 0
-    for(const key in n2.props){
-      patchProps(el, key, n1.props[key], n2.props[key])
-    }
-    for(const key in n1.props){
-      if(!(key in n2.props)){
-        patchProps(el, key, n1.props[key], null)
+    const props = n2.props
+    const oldProps = n1.props
+    for(const key in props){
+      if(oldProps[key] !== props[key]){
+        patchProps(el, key, oldProps[key], props[key])
       }
     }
-    for(let i = 0; i < len; i++){
-      patch(n1.children[i], n2.children[i], el)
+    for(const key in oldProps){
+      if(!(key in props)){
+        patchProps(el, key, oldProps[key], null)
+      }
+    }
+    patchChildren(n1, n2, el)
+  }
+
+  const patchChildren = (n1, n2, container) => {
+    // 规范化子节点的三种情况：null, text, <text | vnode>[]
+    if(typeof n2.children === 'string'){
+      if(isArray(n1.children)){
+        n1.children.forEach(cvnode => unmount(cvnode))
+      }
+      setElementText(container, n2.children)
+    }else if(isArray(n2.children)){
+      if(isArray(n1.children)){
+        // 核心diff算法逻辑
+        n1.children.forEach(cvnode => unmount(cvnode))
+        n2.children.forEach(cvnode => patch(null, cvnode, container))
+      }else {
+        setElementText(container, '')
+        n2.children.forEach(cvnode => patch(null, cvnode, container))
+      }
+    }else {
+      if(isArray(n1.children)){
+        n1.children.forEach(cvnode => unmount(cvnode))
+      }else if(typeof n1.children === 'string'){
+        setElementText(container, '')
+      }
     }
   }
 
