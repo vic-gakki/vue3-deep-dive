@@ -51,7 +51,7 @@ const createRenderer = (options) => {
 
   }
 
-  const patch = (n1, n2, container) => {
+  const patch = (n1, n2, container, anchor) => {
     if(n1 && n1.type !== n2.type){
       unmount(n1)
       n1 = null
@@ -59,7 +59,7 @@ const createRenderer = (options) => {
     const {type} = n2
     if(typeof type === 'string'){
       if(!n1){
-        mountElement(n2, container)
+        mountElement(n2, container, anchor)
       }else {
         patchElement(n1, n2)
       }
@@ -101,7 +101,7 @@ const createRenderer = (options) => {
     
   }
 
-  const mountElement = (vnode, container) => {
+  const mountElement = (vnode, container, anchor) => {
     const el = vnode.el = createElement(vnode.type)
     if(typeof vnode.children === 'string'){
       setElementText(el, vnode.children)
@@ -113,7 +113,7 @@ const createRenderer = (options) => {
         patchProps(el, key, null, value)
       }
     }
-    insert(el, container)
+    insert(el, container, anchor)
   }
 
   const patchElement = (n1, n2) => {
@@ -143,23 +143,68 @@ const createRenderer = (options) => {
     }else if(isArray(n2.children)){
       if(isArray(n1.children)){
         // 核心diff算法逻辑
+
+        // 暴力unmount，然后mount
         // n1.children.forEach(cvnode => unmount(cvnode))
         // n2.children.forEach(cvnode => patch(null, cvnode, container))
+
+        // 比较相同位置的vnode，然后mount新数组剩下的或者unmount旧数组剩下的
+        // const oldChildren = n1.children
+        // const newChildren = n2.children
+        // const oldLen = oldChildren.length
+        // const len = newChildren.length
+        // const commonLen = Math.min(oldLen, len)
+        // for(let i = 0; i < commonLen; i++){
+        //   patch(oldChildren[i], newChildren[i], container)
+        // }
+        // if(len > oldLen){
+        //   for(let i = commonLen; i < len; i++){
+        //     patch(null, newChildren[i], container)
+        //   }
+        // }else if(oldLen > len){
+        //   for(let i = commonLen; i <oldLen; i++){
+        //     unmount(oldChildren[i])
+        //   }
+        // }
+
         const oldChildren = n1.children
         const newChildren = n2.children
-        const oldLen = oldChildren.length
-        const len = newChildren.length
-        const commonLen = Math.min(oldLen, len)
-        for(let i = 0; i < commonLen; i++){
-          patch(oldChildren[i], newChildren[i], container)
-        }
-        if(len > oldLen){
-          for(let i = commonLen; i < len; i++){
-            patch(null, newChildren[i], container)
+        const lastIndex = 0
+        for(let i = 0; i < newChildren.length; i++){
+          const newNode = newChildren[i]
+          let find = false
+          for(let j = 0; j < oldChildren.length; j++){
+            const oldNode = oldChildren[j]
+            if(oldNode.type === newNode.type && oldNode.key === newNode.key){
+              patch(oldNode, newNode, container)
+              if(j < lastIndex){
+                // 该元素需要移动
+                const anchor = newChildren[i - 1]?.el?.nextSiblings
+                insert(oldNode.el, container, anchor)
+              }else if(j > lastIndex){
+                lastIndex = j
+              }
+              find = true
+              break;
+            }
           }
-        }else if(oldLen > len){
-          for(let i = commonLen; i <oldLen; i++){
-            unmount(oldChildren[i])
+          if(!find){
+            // 新增元素
+            const prev = newChildren[i - 1]
+            let anchor
+            if(prev){
+              anchor = prev.el.nextSiblings
+            }else {
+              anchor = container.firstChild
+            }
+            patch(null, newNode, container, anchor)
+          }
+        }
+        for(let i = 0; i < oldChildren.length; i++){
+          const oldNode = oldChildren[i]
+          const has = newChildren.find(nv => nv.type === oldNode.type && nv.key === oldNode.key)
+          if(!has){
+            unmount(oldNode)
           }
         }
 
