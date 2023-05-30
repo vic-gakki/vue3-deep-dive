@@ -31,6 +31,7 @@ const {effect, ref} = VueReactivity
 
 const Text = Symbol()
 const Comment = Symbol()
+const Fragment = Symbol()
 
 const createRenderer = (options) => {
   const { insert, setElementText, createElement, patchProps, remove, createText, setText, createComment } = options
@@ -89,6 +90,12 @@ const createRenderer = (options) => {
         if(n1.children !== n2.children){
           setText(el, n2.children)
         }
+      }
+    }else if(type === Fragment){
+      if(!n1){
+        n2.children.forEach(v => patch(null, v, container))
+      }else {
+        patchChildren(n1, n2, container)
       }
     }
     
@@ -152,6 +159,10 @@ const createRenderer = (options) => {
   }
 
   const unmount = (vnode) => {
+    if(vnode.type === Fragment){
+      vnode.children(v => unmount(v))
+      return
+    }
     const parent = vnode.el.parentNode
     remove(vnode.el, parent)
   }
