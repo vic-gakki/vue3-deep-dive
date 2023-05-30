@@ -143,8 +143,26 @@ const createRenderer = (options) => {
     }else if(isArray(n2.children)){
       if(isArray(n1.children)){
         // 核心diff算法逻辑
-        n1.children.forEach(cvnode => unmount(cvnode))
-        n2.children.forEach(cvnode => patch(null, cvnode, container))
+        // n1.children.forEach(cvnode => unmount(cvnode))
+        // n2.children.forEach(cvnode => patch(null, cvnode, container))
+        const oldChildren = n1.children
+        const newChildren = n2.children
+        const oldLen = oldChildren.length
+        const len = newChildren.length
+        const commonLen = Math.min(oldLen, len)
+        for(let i = 0; i < commonLen; i++){
+          patch(oldChildren[i], newChildren[i], container)
+        }
+        if(len > oldLen){
+          for(let i = commonLen; i < len; i++){
+            patch(null, newChildren[i], container)
+          }
+        }else if(oldLen > len){
+          for(let i = commonLen; i <oldLen; i++){
+            unmount(oldChildren[i])
+          }
+        }
+
       }else {
         setElementText(container, '')
         n2.children.forEach(cvnode => patch(null, cvnode, container))
