@@ -29,11 +29,11 @@ const {effect, ref} = VueReactivity
 
 // count.value++
 
-
+const Text = Symbol()
+const Comment = Symbol()
 
 const createRenderer = (options) => {
-  const { insert, setElementText, createElement, patchProps, remove } = options
-
+  const { insert, setElementText, createElement, patchProps, remove, createText, setText, createComment } = options
   const render = (vnode, container) => {
     if(vnode){
       patch(container._vnode, vnode, container)
@@ -67,6 +67,28 @@ const createRenderer = (options) => {
         mountComponent(n2, container)
       }else {
         patchComponent(n1, n2)
+      }
+    }else if(type === Text){
+      // 文本节点
+      if(!n1){
+        const el = n2.el = createText(n2.children)
+        insert(el, container)
+      }else {
+        const el = n2.el = n1.el
+        if(n1.children !== n2.children){
+          setText(el, n2.children)
+        }
+      }
+    }else if(type === Comment){
+      // 注释节点
+      if(!n1){
+        const el = n2.el = createComment(n2.children)
+        insert(el, container)
+      }else {
+        const el = n2.el = n1.el
+        if(n1.children !== n2.children){
+          setText(el, n2.children)
+        }
       }
     }
     
@@ -200,6 +222,15 @@ const renderer = createRenderer({
   },
   remove(el, container){
     container && container.removeChild(el)
+  },
+  createText(text){
+    return document.createTextNode(text)
+  },
+  createComment(c){
+    return document.createComment(c)
+  },
+  setText(node, value){
+    node.nodeValue = value
   }
 })
 
@@ -251,25 +282,52 @@ const normalizeClass = classVal => {
  * 
  * 即便vue的更新时机是在异步的微任务队列中，但是微任务会穿插在由事件冒泡触发的多个事件处理函数之间执行 
  */
-const bool = ref(false)
+// const bool = ref(false)
+// effect(() => {
+//   const vnode = {
+//     type: 'div',
+//     props: bool.value ? {
+//       onClick: e => {
+//         console.log('parent get clicked', e)
+//       }
+//     } : {},
+//     children: [{
+//       type: 'p',
+//       children: 'click me',
+//       props: {
+//         onClick(e){
+//           console.log('son get clicked', e)
+//           bool.value = true
+//         }
+//       }
+//     }]
+//   }
+//   renderer.render(vnode, document.getElementById('app'))
+// })
+
+const counter = ref(1)
 effect(() => {
   const vnode = {
     type: 'div',
-    props: bool.value ? {
-      onClick: e => {
-        console.log('parent get clicked', e)
+    children: [
+      {
+        type: 'button',
+        props: {
+          onClick: () => {
+            counter.value++
+          }
+        },
+        children: 'Click me'
+      },
+      {
+        type: Text,
+        children: `I'm children text, counter is ${counter.value}`
+      },
+      {
+        type: Comment,
+        children: `I'm children comment, counter is ${counter.value}`
       }
-    } : {},
-    children: [{
-      type: 'p',
-      children: 'click me',
-      props: {
-        onClick(e){
-          console.log('son get clicked', e)
-          bool.value = true
-        }
-      }
-    }]
+    ]
   }
   renderer.render(vnode, document.getElementById('app'))
 })
