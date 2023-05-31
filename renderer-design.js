@@ -167,46 +167,49 @@ const createRenderer = (options) => {
         //   }
         // }
 
-        const oldChildren = n1.children
-        const newChildren = n2.children
-        const lastIndex = 0
-        for(let i = 0; i < newChildren.length; i++){
-          const newNode = newChildren[i]
-          let find = false
-          for(let j = 0; j < oldChildren.length; j++){
-            const oldNode = oldChildren[j]
-            if(oldNode.type === newNode.type && oldNode.key === newNode.key){
-              patch(oldNode, newNode, container)
-              if(j < lastIndex){
-                // 该元素需要移动
-                const anchor = newChildren[i - 1]?.el?.nextSiblings
-                insert(oldNode.el, container, anchor)
-              }else if(j > lastIndex){
-                lastIndex = j
-              }
-              find = true
-              break;
-            }
-          }
-          if(!find){
-            // 新增元素
-            const prev = newChildren[i - 1]
-            let anchor
-            if(prev){
-              anchor = prev.el.nextSiblings
-            }else {
-              anchor = container.firstChild
-            }
-            patch(null, newNode, container, anchor)
-          }
-        }
-        for(let i = 0; i < oldChildren.length; i++){
-          const oldNode = oldChildren[i]
-          const has = newChildren.find(nv => nv.type === oldNode.type && nv.key === oldNode.key)
-          if(!has){
-            unmount(oldNode)
-          }
-        }
+        // const oldChildren = n1.children
+        // const newChildren = n2.children
+        // const lastIndex = 0
+        // for(let i = 0; i < newChildren.length; i++){
+        //   const newNode = newChildren[i]
+        //   let find = false
+        //   for(let j = 0; j < oldChildren.length; j++){
+        //     const oldNode = oldChildren[j]
+        //     if(oldNode.key === newNode.key){
+        //       patch(oldNode, newNode, container)
+        //       if(j < lastIndex){
+        //         // 该元素需要移动
+        //         const anchor = newChildren[i - 1]?.el?.nextSiblings
+        //         insert(oldNode.el, container, anchor)
+        //       }else if(j > lastIndex){
+        //         lastIndex = j
+        //       }
+        //       find = true
+        //       break;
+        //     }
+        //   }
+        //   if(!find){
+        //     // 新增元素
+        //     const prev = newChildren[i - 1]
+        //     let anchor
+        //     if(prev){
+        //       anchor = prev.el.nextSiblings
+        //     }else {
+        //       anchor = container.firstChild
+        //     }
+        //     patch(null, newNode, container, anchor)
+        //   }
+        // }
+        // for(let i = 0; i < oldChildren.length; i++){
+        //   const oldNode = oldChildren[i]
+        //   const has = newChildren.find(nv => nv.type === oldNode.type && nv.key === oldNode.key)
+        //   if(!has){
+        //     unmount(oldNode)
+        //   }
+        // }
+
+
+        patchKeyedChildren(n1, n2, container)
 
       }else {
         setElementText(container, '')
@@ -219,6 +222,74 @@ const createRenderer = (options) => {
         setElementText(container, '')
       }
     }
+  }
+
+  const patchKeyedChildren = (n1, n2, container) => {
+    const oldChildren = n1.children
+    const newChildren = n2.children
+
+    // index
+    let oldStartIndex = 0
+    let oldEndIndex = oldChildren.length - 1
+    let newStartIndex = 0
+    let newEndIndex = newChildren.length - 1
+
+    // vnode
+    let oldStartNode = oldChildren[oldStartIndex] 
+    let oldEndNode = oldChildren[oldEndIndex] 
+    let newStartNode = newChildren[newStartIndex] 
+    let newEndNode = newChildren[newEndIndex] 
+    while(oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex){
+      // 双端比较 oldsi <-> newsi | oldei <-> newei | oldsi <-> newei | oldei <-> newsi
+      if(!oldStartNode){
+        oldStartNode = oldChildren[++oldStartIndex]
+      }else if(!oldEndNode){
+        oldEndNode = oldChildren[--oldEndIndex]
+      }else if(oldStartNode.key === newStartNode.key){
+        patch(oldStartNode, newStartNode, container)
+        oldStartNode = oldChildren[++oldStartIndex]
+        newStartNode = newChildren[++newStartIndex]
+      }else if(oldEndNode.key === newEndNode.key){
+        patch(oldEndNode, newEndNode, container)
+        oldEndNode = oldChildren[--oldEndIndex]
+        newEndNode = newChildren[--newEndIndex]
+      }else if(oldStartNode.key === newEndNode.key){
+        patch(oldStartNode, newEndNode, container)
+        insert(oldStartNode.el, container, oldEndNode.el.nextSiblings)
+        oldStartNode = oldChildren[++oldStartIndex]
+        newEndNode = newChildren[--newEndIndex]
+      }else if(oldEndNode.key === newStartNode.key){
+        patch(oldEndNode, newStartNode, container)
+        insert(oldEndNode.el, container, oldStartNode.el)
+        oldEndNode = oldChildren[--oldEndIndex]
+        newStartNode = newChildren[++newStartIndex]
+      }else {
+        let index = oldChildren.findIndex(c => c.key === newStartNode.key)
+        if(index > -1){
+          const oldToMove = oldChildren[index]
+          patch(oldToMove, newStartNode, container)
+          insert(oldToMove.el, container, oldStartNode.el)
+          // 该项已经patch 和 移动处理了，设置标记标明已经处理过
+          oldChildren[index] = undefined
+        }else {
+          patch(null, newStartNode, container, oldStartNode.el)
+        }
+        newStartNode = newChildren[++newStartIndex]
+      }
+    }
+
+    if(oldStartIndex > oldEndIndex && newStartIndex <= newEndIndex){
+      // 新增元素
+      for(let i = newStartIndex; i <= newEndIndex; i++){
+        patch(null, newChildren[i], container, oldStartNode.el)
+      }
+    }else if(newStartIndex > newEndIndex && oldStartIndex <= oldEndIndex){
+      // 删除元素
+      for(let i = oldStartIndex; i <= oldEndIndex; i++){
+        unmount(oldChildren[i])
+      }
+    }
+
   }
 
   const unmount = (vnode) => {
@@ -379,29 +450,180 @@ const normalizeClass = classVal => {
 //   renderer.render(vnode, document.getElementById('app'))
 // })
 
-const counter = ref(1)
-effect(() => {
-  const vnode = {
-    type: 'div',
-    children: [
-      {
-        type: 'button',
-        props: {
-          onClick: () => {
-            counter.value++
-          }
-        },
-        children: 'Click me'
-      },
-      {
-        type: Text,
-        children: `I'm children text, counter is ${counter.value}`
-      },
-      {
-        type: Comment,
-        children: `I'm children comment, counter is ${counter.value}`
-      }
-    ]
-  }
-  renderer.render(vnode, document.getElementById('app'))
-})
+// const counter = ref(1)
+// effect(() => {
+//   const vnode = {
+//     type: 'div',
+//     children: [
+//       {
+//         type: 'button',
+//         props: {
+//           onClick: () => {
+//             counter.value++
+//           }
+//         },
+//         children: 'Click me'
+//       },
+//       {
+//         type: Text,
+//         children: `I'm children text, counter is ${counter.value}`
+//       },
+//       {
+//         type: Comment,
+//         children: `I'm children comment, counter is ${counter.value}`
+//       }
+//     ]
+//   }
+//   renderer.render(vnode, document.getElementById('app'))
+// })
+
+
+// const vnode1 = {
+//   type: 'div',
+//   children: [
+//     {
+//       type: 'p',
+//       key: 2,
+//       children: 'p-2'
+//     },
+//     {
+//       type: 'p',
+//       key: 4,
+//       children: 'p-4'
+//     },
+//     {
+//       type: 'p',
+//       key: 1,
+//       children: 'p-1'
+//     },
+//     {
+//       type: 'p',
+//       key: 3,
+//       children: 'p-3'
+//     },
+//   ]
+// }
+// renderer.render(vnode1, document.getElementById('app'))
+
+// const vnodeNew1 = {
+//   type: 'div',
+//   children: [
+//     {
+//       type: 'p',
+//       key: 1,
+//       children: 'p-1'
+//     },
+//     {
+//       type: 'p',
+//       key: 2,
+//       children: 'p-2'
+//     },
+//     {
+//       type: 'p',
+//       key: 3,
+//       children: 'p-3'
+//     },
+//     {
+//       type: 'p',
+//       key: 4,
+//       children: 'p-4'
+//     }
+//   ]
+// }
+// setTimeout(() => {
+//   renderer.render(vnodeNew1, document.getElementById('app'))
+// }, 2000)
+
+
+// const vnode2 = {
+//   type: 'div',
+//   children: [
+//     {
+//       type: 'p',
+//       key: 1,
+//       children: 'p-1'
+//     },
+//     {
+//       type: 'p',
+//       key: 2,
+//       children: 'p-2'
+//     },
+//     {
+//       type: 'p',
+//       key: 3,
+//       children: 'p-3'
+//     },
+//   ]
+// }
+// renderer.render(vnode2, document.getElementById('app'))
+
+// const vnodeNew2 = {
+//   type: 'div',
+//   children: [
+//     {
+//       type: 'p',
+//       key: 4,
+//       children: 'p-4'
+//     },
+//     {
+//       type: 'p',
+//       key: 1,
+//       children: 'p-1'
+//     },
+//     {
+//       type: 'p',
+//       key: 2,
+//       children: 'p-2'
+//     },
+//     {
+//       type: 'p',
+//       key: 3,
+//       children: 'p-3'
+//     },
+//   ]
+// }
+// setTimeout(() => {
+//   renderer.render(vnodeNew2, document.getElementById('app'))
+// }, 2000)
+
+const vnode3 = {
+  type: 'div',
+  children: [
+    {
+      type: 'p',
+      key: 1,
+      children: 'p-1'
+    },
+    {
+      type: 'p',
+      key: 2,
+      children: 'p-2'
+    },
+    {
+      type: 'p',
+      key: 3,
+      children: 'p-3'
+    },
+  ]
+}
+renderer.render(vnode3, document.getElementById('app'))
+
+const vnodeNew3 = {
+  type: 'div',
+  children: [
+    {
+      type: 'p',
+      key: 1,
+      children: 'p-1'
+    },
+    {
+      type: 'p',
+      key: 3,
+      children: 'p-3'
+    },
+  ]
+}
+setTimeout(() => {
+  renderer.render(vnodeNew3, document.getElementById('app'))
+}, 2000)
+
