@@ -209,7 +209,8 @@ const createRenderer = (options) => {
         // }
 
 
-        patchKeyedChildren(n1, n2, container)
+        // patchKeyedChildren(n1, n2, container)
+        patchKeyedChildrenV3(n1, n2, container)
 
       }else {
         setElementText(container, '')
@@ -286,6 +287,48 @@ const createRenderer = (options) => {
     }else if(newStartIndex > newEndIndex && oldStartIndex <= oldEndIndex){
       // 删除元素
       for(let i = oldStartIndex; i <= oldEndIndex; i++){
+        unmount(oldChildren[i])
+      }
+    }
+
+  }
+
+
+  const patchKeyedChildrenV3 = (n1, n2, container) => {
+    const oldChildren = n1.children
+    const newChildren = n2.children
+    let startIdx = 0
+    let newNode = newChildren[startIdx]
+    let oldNode = oldChildren[startIdx]
+    // 预处理相同的前置后置元素
+    while(newNode.key === oldNode.key){
+      patch(oldNode, newNode, container)
+      startIdx++
+      newNode = newChildren[startIdx]
+      oldNode = oldChildren[startIdx]
+    }
+    let newEndIdx = newChildren.length - 1
+    let oldEndIdx = oldChildren.length - 1
+
+    oldNode = oldChildren[oldEndIdx]
+    newNode = newChildren[newEndIdx]
+
+    while(oldNode.key === newNode.key){
+      patch(oldNode, newNode, container)
+      oldNode = oldChildren[--oldEndIdx]
+      newNode = newChildren[--newEndIdx]
+    }
+
+    if(oldEndIdx < startIdx && startIdx <= newEndIdx){
+      //新增
+      const nextIdx = newEndIdx + 1
+      const anchor = nextIdx < newChildren.length ? newChildren[nextIdx].el : null
+      for(let i = startIdx; i <= newEndIdx; i++){
+        patch(null, newChildren[i], container, anchor)
+      }
+    }else if(startIdx > newEndIdx && startIdx <= oldEndIdx){
+      // 卸载
+      for(let i = startIdx; i <= oldEndIdx; i++){
         unmount(oldChildren[i])
       }
     }
