@@ -15,8 +15,10 @@
 // import { effect } from "./reactive.js";
 // import { ref } from "./primitive-reactive.js";
 
-import { isArray, isObject} from "./util.js"
-const {effect, ref} = VueReactivity
+import { isArray, isObject, getLongSequence } from "./util.js"
+const { effect, ref } = VueReactivity
+
+console.log(getLongSequence([2,3,1,-1]))
 
 // const renderer = (domstring, contaienr) => {
 //   contaienr.innerHTML = domstring
@@ -36,10 +38,10 @@ const Fragment = Symbol()
 const createRenderer = (options) => {
   const { insert, setElementText, createElement, patchProps, remove, createText, setText, createComment } = options
   const render = (vnode, container) => {
-    if(vnode){
+    if (vnode) {
       patch(container._vnode, vnode, container)
-    }else{
-      if(container._vnode){
+    } else {
+      if (container._vnode) {
         // unmount, 直接设置innerHtml，不能检测里面的组件继而不能出发组件的生命周期hook，不能检测dom上的指令生命周期hook，不能移除事件
         unmount(container._vnode)
       }
@@ -52,64 +54,64 @@ const createRenderer = (options) => {
   }
 
   const patch = (n1, n2, container, anchor) => {
-    if(n1 && n1.type !== n2.type){
+    if (n1 && n1.type !== n2.type) {
       unmount(n1)
       n1 = null
     }
-    const {type} = n2
-    if(typeof type === 'string'){
-      if(!n1){
+    const { type } = n2
+    if (typeof type === 'string') {
+      if (!n1) {
         mountElement(n2, container, anchor)
-      }else {
+      } else {
         patchElement(n1, n2)
       }
-    }else if(isObject(type)){
-      if(!n1){
+    } else if (isObject(type)) {
+      if (!n1) {
         mountComponent(n2, container)
-      }else {
+      } else {
         patchComponent(n1, n2)
       }
-    }else if(type === Text){
+    } else if (type === Text) {
       // 文本节点
-      if(!n1){
+      if (!n1) {
         const el = n2.el = createText(n2.children)
         insert(el, container)
-      }else {
+      } else {
         const el = n2.el = n1.el
-        if(n1.children !== n2.children){
+        if (n1.children !== n2.children) {
           setText(el, n2.children)
         }
       }
-    }else if(type === Comment){
+    } else if (type === Comment) {
       // 注释节点
-      if(!n1){
+      if (!n1) {
         const el = n2.el = createComment(n2.children)
         insert(el, container)
-      }else {
+      } else {
         const el = n2.el = n1.el
-        if(n1.children !== n2.children){
+        if (n1.children !== n2.children) {
           setText(el, n2.children)
         }
       }
-    }else if(type === Fragment){
-      if(!n1){
+    } else if (type === Fragment) {
+      if (!n1) {
         n2.children.forEach(v => patch(null, v, container))
-      }else {
+      } else {
         patchChildren(n1, n2, container)
       }
     }
-    
+
   }
 
   const mountElement = (vnode, container, anchor) => {
     const el = vnode.el = createElement(vnode.type)
-    if(typeof vnode.children === 'string'){
+    if (typeof vnode.children === 'string') {
       setElementText(el, vnode.children)
-    }else if(isArray(vnode.children)){
+    } else if (isArray(vnode.children)) {
       vnode.children.forEach(v => patch(null, v, el))
     }
-    if(vnode.props){
-      for(const [key, value] of Object.entries(vnode.props)){
+    if (vnode.props) {
+      for (const [key, value] of Object.entries(vnode.props)) {
         patchProps(el, key, null, value)
       }
     }
@@ -120,13 +122,13 @@ const createRenderer = (options) => {
     const el = n2.el = n1.el
     const props = n2.props
     const oldProps = n1.props
-    for(const key in props){
-      if(oldProps[key] !== props[key]){
+    for (const key in props) {
+      if (oldProps[key] !== props[key]) {
         patchProps(el, key, oldProps[key], props[key])
       }
     }
-    for(const key in oldProps){
-      if(!(key in props)){
+    for (const key in oldProps) {
+      if (!(key in props)) {
         patchProps(el, key, oldProps[key], null)
       }
     }
@@ -135,13 +137,13 @@ const createRenderer = (options) => {
 
   const patchChildren = (n1, n2, container) => {
     // 规范化子节点的三种情况：null, text, <text | vnode>[]
-    if(typeof n2.children === 'string'){
-      if(isArray(n1.children)){
+    if (typeof n2.children === 'string') {
+      if (isArray(n1.children)) {
         n1.children.forEach(cvnode => unmount(cvnode))
       }
       setElementText(container, n2.children)
-    }else if(isArray(n2.children)){
-      if(isArray(n1.children)){
+    } else if (isArray(n2.children)) {
+      if (isArray(n1.children)) {
         // 核心diff算法逻辑
 
         // 暴力unmount，然后mount
@@ -212,14 +214,14 @@ const createRenderer = (options) => {
         // patchKeyedChildren(n1, n2, container)
         patchKeyedChildrenV3(n1, n2, container)
 
-      }else {
+      } else {
         setElementText(container, '')
         n2.children.forEach(cvnode => patch(null, cvnode, container))
       }
-    }else {
-      if(isArray(n1.children)){
+    } else {
+      if (isArray(n1.children)) {
         n1.children.forEach(cvnode => unmount(cvnode))
-      }else if(typeof n1.children === 'string'){
+      } else if (typeof n1.children === 'string') {
         setElementText(container, '')
       }
     }
@@ -236,57 +238,57 @@ const createRenderer = (options) => {
     let newEndIndex = newChildren.length - 1
 
     // vnode
-    let oldStartNode = oldChildren[oldStartIndex] 
-    let oldEndNode = oldChildren[oldEndIndex] 
-    let newStartNode = newChildren[newStartIndex] 
-    let newEndNode = newChildren[newEndIndex] 
-    while(oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex){
+    let oldStartNode = oldChildren[oldStartIndex]
+    let oldEndNode = oldChildren[oldEndIndex]
+    let newStartNode = newChildren[newStartIndex]
+    let newEndNode = newChildren[newEndIndex]
+    while (oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
       // 双端比较 oldsi <-> newsi | oldei <-> newei | oldsi <-> newei | oldei <-> newsi
-      if(!oldStartNode){
+      if (!oldStartNode) {
         oldStartNode = oldChildren[++oldStartIndex]
-      }else if(!oldEndNode){
+      } else if (!oldEndNode) {
         oldEndNode = oldChildren[--oldEndIndex]
-      }else if(oldStartNode.key === newStartNode.key){
+      } else if (oldStartNode.key === newStartNode.key) {
         patch(oldStartNode, newStartNode, container)
         oldStartNode = oldChildren[++oldStartIndex]
         newStartNode = newChildren[++newStartIndex]
-      }else if(oldEndNode.key === newEndNode.key){
+      } else if (oldEndNode.key === newEndNode.key) {
         patch(oldEndNode, newEndNode, container)
         oldEndNode = oldChildren[--oldEndIndex]
         newEndNode = newChildren[--newEndIndex]
-      }else if(oldStartNode.key === newEndNode.key){
+      } else if (oldStartNode.key === newEndNode.key) {
         patch(oldStartNode, newEndNode, container)
         insert(oldStartNode.el, container, oldEndNode.el.nextSiblings)
         oldStartNode = oldChildren[++oldStartIndex]
         newEndNode = newChildren[--newEndIndex]
-      }else if(oldEndNode.key === newStartNode.key){
+      } else if (oldEndNode.key === newStartNode.key) {
         patch(oldEndNode, newStartNode, container)
         insert(oldEndNode.el, container, oldStartNode.el)
         oldEndNode = oldChildren[--oldEndIndex]
         newStartNode = newChildren[++newStartIndex]
-      }else {
+      } else {
         let index = oldChildren.findIndex(c => c.key === newStartNode.key)
-        if(index > -1){
+        if (index > -1) {
           const oldToMove = oldChildren[index]
           patch(oldToMove, newStartNode, container)
           insert(oldToMove.el, container, oldStartNode.el)
           // 该项已经patch 和 移动处理了，设置标记标明已经处理过
           oldChildren[index] = undefined
-        }else {
+        } else {
           patch(null, newStartNode, container, oldStartNode.el)
         }
         newStartNode = newChildren[++newStartIndex]
       }
     }
 
-    if(oldStartIndex > oldEndIndex && newStartIndex <= newEndIndex){
+    if (oldStartIndex > oldEndIndex && newStartIndex <= newEndIndex) {
       // 新增元素
-      for(let i = newStartIndex; i <= newEndIndex; i++){
+      for (let i = newStartIndex; i <= newEndIndex; i++) {
         patch(null, newChildren[i], container, oldStartNode.el)
       }
-    }else if(newStartIndex > newEndIndex && oldStartIndex <= oldEndIndex){
+    } else if (newStartIndex > newEndIndex && oldStartIndex <= oldEndIndex) {
       // 删除元素
-      for(let i = oldStartIndex; i <= oldEndIndex; i++){
+      for (let i = oldStartIndex; i <= oldEndIndex; i++) {
         unmount(oldChildren[i])
       }
     }
@@ -301,7 +303,7 @@ const createRenderer = (options) => {
     let newNode = newChildren[startIdx]
     let oldNode = oldChildren[startIdx]
     // 预处理相同的前置后置元素
-    while(newNode.key === oldNode.key){
+    while (newNode.key === oldNode.key) {
       patch(oldNode, newNode, container)
       startIdx++
       newNode = newChildren[startIdx]
@@ -313,30 +315,84 @@ const createRenderer = (options) => {
     oldNode = oldChildren[oldEndIdx]
     newNode = newChildren[newEndIdx]
 
-    while(oldNode.key === newNode.key){
+    while (oldNode.key === newNode.key) {
       patch(oldNode, newNode, container)
       oldNode = oldChildren[--oldEndIdx]
       newNode = newChildren[--newEndIdx]
     }
 
-    if(oldEndIdx < startIdx && startIdx <= newEndIdx){
-      //新增
+    if (oldEndIdx < startIdx && startIdx <= newEndIdx) {
+      // 新增
       const nextIdx = newEndIdx + 1
       const anchor = nextIdx < newChildren.length ? newChildren[nextIdx].el : null
-      for(let i = startIdx; i <= newEndIdx; i++){
+      for (let i = startIdx; i <= newEndIdx; i++) {
         patch(null, newChildren[i], container, anchor)
       }
-    }else if(startIdx > newEndIdx && startIdx <= oldEndIdx){
+    } else if (startIdx > newEndIdx && startIdx <= oldEndIdx) {
       // 卸载
-      for(let i = startIdx; i <= oldEndIdx; i++){
+      for (let i = startIdx; i <= oldEndIdx; i++) {
         unmount(oldChildren[i])
+      }
+    } else {
+      // 都有剩余元素未处理
+      const newStartIdx = startIdx
+      const oldStartIdx = startIdx
+      let keyToNewIndexMap = {}
+      let moved = false
+      let patched = 0
+      let maxSoFar = 0
+      let toBePatched = newEndIdx - newStartIdx + 1
+      const source = new Array(toBePatched)
+      source.fill(-1)
+      for (let i = newStartIdx; i <= newEndIdx; i++) {
+        const node = newChildren[i]
+        if (node.key) {
+          keyToNewIndexMap[node.key] = i
+        }
+      }
+      for (let i = oldStartIdx; i <= oldEndIdx; i++) {
+        const node = oldChildren[i]
+        const index = keyToNewIndexMap[node.key]
+        if (patch > toBePatched) {
+          unmount(node)
+        } else if (typeof index === 'undefined') {
+          unmount(node)
+        } else {
+          source[index - newStartIdx] = i
+          patch(node, newChildren[index], container)
+          patched++
+          if (index >= maxSoFar) {
+            maxSoFar = index
+          } else {
+            moved = true
+          }
+        }
+      }
+
+      const seq = moved ? getLongSequence(source) : []
+      let j = seq.length - 1
+      let i = toBePatched - 1
+      for (i; i >= 0; i--) {
+        if (source[i] === -1) {
+          // 新元素
+          const nextIdx = i + newStartIdx + 1
+          const anchor = nextIdx < newChildren.length ? newChildren[nextIdx].el : null
+          patch(null, newChildren[i + newStartIdx], container, anchor)
+        } else if (i !== seq[j]) {
+          const nextIdx = i + newStartIdx + 1
+          const anchor = nextIdx < newChildren.length ? newChildren[nextIdx].el : null
+          insert(newChildren[i + newStartIdx].el, container, anchor)
+        } else {
+          j--
+        }
       }
     }
 
   }
 
+
   const unmount = (vnode) => {
-    if(vnode.type === Fragment){
+    if (vnode.type === Fragment) {
       vnode.children(v => unmount(v))
       return
     }
@@ -349,7 +405,7 @@ const createRenderer = (options) => {
   }
 
   const patchComponent = () => {
-    
+
   }
 
 
@@ -360,30 +416,30 @@ const createRenderer = (options) => {
 }
 
 const renderer = createRenderer({
-  createElement(tag){
+  createElement(tag) {
     return document.createElement(tag)
   },
-  setElementText(node, text){
+  setElementText(node, text) {
     node.textContent = text
   },
-  insert(node, parent, anchor = null){
+  insert(node, parent, anchor = null) {
     parent.insertBefore(node, anchor)
   },
-  patchProps(node, key, oldValue, newValue){
+  patchProps(node, key, oldValue, newValue) {
     // 事件的处理
-    if(/^on/.test(key)){
+    if (/^on/.test(key)) {
       const eventName = key.slice(2).toLowerCase()
       // 多个不同事件的绑定处理
       const invokers = node._vel || (node._vel = {})
       let invoker = invokers[key]
-      if(newValue){
-        if(!invoker){
+      if (newValue) {
+        if (!invoker) {
           invoker = node._vel[key] = e => {
             // 同一事件多个回调
-            if(e.timeStamp < invoker.attached) return
-            if(isArray(invoker.value)){
+            if (e.timeStamp < invoker.attached) return
+            if (isArray(invoker.value)) {
               invoker.value.forEach(fn => fn(e))
-            }else {
+            } else {
               invoker.value(e)
             }
           }
@@ -391,51 +447,51 @@ const renderer = createRenderer({
           node.addEventListener(eventName, invoker)
         }
         invoker.value = newValue
-      }else if(invoker){
+      } else if (invoker) {
         node.removeEventListener(eventName, invoker)
       }
-    }else if(key === 'class'){
+    } else if (key === 'class') {
       // 为元素设置class的三种方法：setAttribute, el.className, el.classList, className性能最优
       node.className = newValue || ''
-    }else if (shouldSetAsProps(node, key, newValue)){ // 优先在dom props上设置
+    } else if (shouldSetAsProps(node, key, newValue)) { // 优先在dom props上设置
       const type = typeof node[key]
-      if(type === 'boolean' && newValue === ''){
-       node[key] = true
-      }else {
+      if (type === 'boolean' && newValue === '') {
+        node[key] = true
+      } else {
         node[key] = newValue
       }
-    }else {
+    } else {
       node.setAttribute(key, newValue)
     }
   },
-  remove(el, container){
+  remove(el, container) {
     container && container.removeChild(el)
   },
-  createText(text){
+  createText(text) {
     return document.createTextNode(text)
   },
-  createComment(c){
+  createComment(c) {
     return document.createComment(c)
   },
-  setText(node, value){
+  setText(node, value) {
     node.nodeValue = value
   }
 })
 
 const shouldSetAsProps = (el, key, value) => {
   // input的form属性是readonly
-  if(key ==='form' && el.tagName === 'INPUT'){
+  if (key === 'form' && el.tagName === 'INPUT') {
     return false
   }
   return key in el
 }
 
 const normalizeClass = classVal => {
-  if(typeof classVal === 'string'){
+  if (typeof classVal === 'string') {
     return classVal
-  }else if(isObject(classVal)){
+  } else if (isObject(classVal)) {
     return Object.entries(classVal).filter(([key, value]) => value).map(([key, value]) => key).join(' ')
-  }else if(isArray(classVal)){
+  } else if (isArray(classVal)) {
     return classVal.reduce((acc, cur) => {
       acc += ` ${normalizeClass(cur)}`
       return acc
@@ -629,44 +685,169 @@ const normalizeClass = classVal => {
 //   renderer.render(vnodeNew2, document.getElementById('app'))
 // }, 2000)
 
-const vnode3 = {
+
+
+// v3 test
+// const vnode3 = {
+//   type: 'div',
+//   children: [
+//     {
+//       type: 'p',
+//       key: 'a',
+//       children: 'p-a'
+//     },
+//     {
+//       type: 'p',
+//       key: 'b',
+//       children: 'p-b'
+//     },
+//     {
+//       type: 'p',
+//       key: 'e',
+//       children: 'p-e'
+//     },
+//     {
+//       type: 'p',
+//       key: 'g',
+//       children: 'p-g'
+//     },
+//     {
+//       type: 'p',
+//       key: 'f',
+//       children: 'p-f'
+//     },
+//     {
+//       type: 'p',
+//       key: 'c',
+//       children: 'p-c'
+//     },
+//     {
+//       type: 'p',
+//       key: 'd',
+//       children: 'p-d'
+//     }
+//   ]
+// }
+// renderer.render(vnode3, document.getElementById('app'))
+
+// const vnodeNew3 = {
+//   type: 'div',
+//   children: [
+//     {
+//       type: 'p',
+//       key: 'a',
+//       children: 'p-a'
+//     },
+//     {
+//       type: 'p',
+//       key: 'b',
+//       children: 'p-b'
+//     },
+//     {
+//       type: 'p',
+//       key: 'f',
+//       children: 'p-f'
+//     },
+//     {
+//       type: 'p',
+//       key: 'e',
+//       children: 'p-e'
+//     },
+//     {
+//       type: 'p',
+//       key: 'h',
+//       children: 'p-h'
+//     },
+//     {
+//       type: 'p',
+//       key: 'c',
+//       children: 'p-c'
+//     },
+//     {
+//       type: 'p',
+//       key: 'd',
+//       children: 'p-d'
+//     }
+//   ]
+// }
+// setTimeout(() => {
+//   renderer.render(vnodeNew3, document.getElementById('app'))
+// }, 2000)
+
+
+const vnode4 = {
   type: 'div',
   children: [
     {
       type: 'p',
-      key: 1,
+      key: '1',
       children: 'p-1'
     },
     {
       type: 'p',
-      key: 2,
+      key: '3',
+      children: 'p-3'
+    },
+    {
+      type: 'p',
+      key: '4',
+      children: 'p-4'
+    },
+    {
+      type: 'p',
+      key: '2',
       children: 'p-2'
     },
     {
       type: 'p',
-      key: 3,
-      children: 'p-3'
+      key: '7',
+      children: 'p-7'
+    },
+    {
+      type: 'p',
+      key: '5',
+      children: 'p-5'
     },
   ]
 }
-renderer.render(vnode3, document.getElementById('app'))
+renderer.render(vnode4, document.getElementById('app'))
 
-const vnodeNew3 = {
+const vnodeNew4 = {
   type: 'div',
   children: [
     {
       type: 'p',
-      key: 1,
+      key: '1',
       children: 'p-1'
     },
     {
       type: 'p',
-      key: 3,
+      key: '2',
+      children: 'p-2'
+    },
+    {
+      type: 'p',
+      key: '3',
       children: 'p-3'
+    },
+    {
+      type: 'p',
+      key: '4',
+      children: 'p-4'
+    },
+    {
+      type: 'p',
+      key: '6',
+      children: 'p-6'
+    },
+    {
+      type: 'p',
+      key: '5',
+      children: 'p-5'
     },
   ]
 }
 setTimeout(() => {
-  renderer.render(vnodeNew3, document.getElementById('app'))
+  renderer.render(vnodeNew4, document.getElementById('app'))
 }, 2000)
 
