@@ -6,6 +6,12 @@ const MyComponent = {
       title: '我是标题',
     }
   },
+  created(){
+    console.log('created')
+  },
+  updated(){
+    console.log('updated')
+  },
   render(){
     return {
       type: 'div',

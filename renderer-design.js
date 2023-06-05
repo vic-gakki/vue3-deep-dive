@@ -303,7 +303,7 @@ const createRenderer = (options) => {
     let newNode = newChildren[startIdx]
     let oldNode = oldChildren[startIdx]
     // 预处理相同的前置后置元素
-    while (newNode.key === oldNode.key) {
+    while (newNode && oldNode && newNode.key === oldNode.key) {
       patch(oldNode, newNode, container)
       startIdx++
       newNode = newChildren[startIdx]
@@ -311,14 +311,15 @@ const createRenderer = (options) => {
     }
     let newEndIdx = newChildren.length - 1
     let oldEndIdx = oldChildren.length - 1
-
-    oldNode = oldChildren[oldEndIdx]
-    newNode = newChildren[newEndIdx]
-
-    while (oldNode.key === newNode.key) {
-      patch(oldNode, newNode, container)
-      oldNode = oldChildren[--oldEndIdx]
-      newNode = newChildren[--newEndIdx]
+    if(startIdx < oldEndIdx && startIdx < newEndIdx){
+      oldNode = oldChildren[oldEndIdx]
+      newNode = newChildren[newEndIdx]
+  
+      while (newNode && oldNode && oldNode.key === newNode.key) {
+        patch(oldNode, newNode, container)
+        oldNode = oldChildren[--oldEndIdx]
+        newNode = newChildren[--newEndIdx]
+      }
     }
 
     if (oldEndIdx < startIdx && startIdx <= newEndIdx) {
@@ -402,11 +403,30 @@ const createRenderer = (options) => {
 
   const mountComponent = (vnode, container, anchor) => {
     const componentOptions = vnode.type
-    const {render, data} = componentOptions
+    const {render, data, beforeCreate, created, beforeMount, mounted, beforeUpdate, updated} = componentOptions
+    beforeCreate && beforeCreate.call(state)
     const state = reactive(data())
+    const instance = {
+      state,
+      isMounted: false,
+      subtree: null
+    }
+    vnode.component = instance
+
+    created && created.call(state)
     effect(() => {
       const subtree = render.call(state, state)
-      patch(null, subtree, container, anchor)
+      if(!instance.isMounted){
+        beforeMount && beforeMount.call(state)
+        patch(null, subtree, container, anchor)
+        mounted && mounted.call(state)
+        instance.isMounted = true
+      }else {
+        beforeUpdate && beforeUpdate.call(state)
+        patch(instance.subtree, subtree, container, anchor)
+        updated && updated.call(state)
+      }
+      instance.subtree = subtree
     },{
       scheduler: queueJob
     })
