@@ -67,7 +67,7 @@ const createRenderer = (options) => {
       }
     } else if (isObject(type)) {
       if (!n1) {
-        mountComponent(n2, container)
+        mountComponent(n2, container, anchor)
       } else {
         patchComponent(n1, n2)
       }
@@ -400,8 +400,11 @@ const createRenderer = (options) => {
     remove(vnode.el, parent)
   }
 
-  const mountComponent = () => {
-
+  const mountComponent = (vnode, container, anchor) => {
+    const componentOptions = vnode.type
+    const {render} = componentOptions
+    const subtree = render()
+    patch(null, subtree, container, anchor)
   }
 
   const patchComponent = () => {
@@ -775,79 +778,82 @@ const normalizeClass = classVal => {
 // }, 2000)
 
 
-const vnode4 = {
-  type: 'div',
-  children: [
-    {
-      type: 'p',
-      key: '1',
-      children: 'p-1'
-    },
-    {
-      type: 'p',
-      key: '3',
-      children: 'p-3'
-    },
-    {
-      type: 'p',
-      key: '4',
-      children: 'p-4'
-    },
-    {
-      type: 'p',
-      key: '2',
-      children: 'p-2'
-    },
-    {
-      type: 'p',
-      key: '7',
-      children: 'p-7'
-    },
-    {
-      type: 'p',
-      key: '5',
-      children: 'p-5'
-    },
-  ]
-}
-renderer.render(vnode4, document.getElementById('app'))
+// const vnode4 = {
+//   type: 'div',
+//   children: [
+//     {
+//       type: 'p',
+//       key: '1',
+//       children: 'p-1'
+//     },
+//     {
+//       type: 'p',
+//       key: '3',
+//       children: 'p-3'
+//     },
+//     {
+//       type: 'p',
+//       key: '4',
+//       children: 'p-4'
+//     },
+//     {
+//       type: 'p',
+//       key: '2',
+//       children: 'p-2'
+//     },
+//     {
+//       type: 'p',
+//       key: '7',
+//       children: 'p-7'
+//     },
+//     {
+//       type: 'p',
+//       key: '5',
+//       children: 'p-5'
+//     },
+//   ]
+// }
+// renderer.render(vnode4, document.getElementById('app'))
 
-const vnodeNew4 = {
-  type: 'div',
-  children: [
-    {
-      type: 'p',
-      key: '1',
-      children: 'p-1'
-    },
-    {
-      type: 'p',
-      key: '2',
-      children: 'p-2'
-    },
-    {
-      type: 'p',
-      key: '3',
-      children: 'p-3'
-    },
-    {
-      type: 'p',
-      key: '4',
-      children: 'p-4'
-    },
-    {
-      type: 'p',
-      key: '6',
-      children: 'p-6'
-    },
-    {
-      type: 'p',
-      key: '5',
-      children: 'p-5'
-    },
-  ]
-}
-setTimeout(() => {
-  renderer.render(vnodeNew4, document.getElementById('app'))
-}, 2000)
+// const vnodeNew4 = {
+//   type: 'div',
+//   children: [
+//     {
+//       type: 'p',
+//       key: '1',
+//       children: 'p-1'
+//     },
+//     {
+//       type: 'p',
+//       key: '2',
+//       children: 'p-2'
+//     },
+//     {
+//       type: 'p',
+//       key: '3',
+//       children: 'p-3'
+//     },
+//     {
+//       type: 'p',
+//       key: '4',
+//       children: 'p-4'
+//     },
+//     {
+//       type: 'p',
+//       key: '6',
+//       children: 'p-6'
+//     },
+//     {
+//       type: 'p',
+//       key: '5',
+//       children: 'p-5'
+//     },
+//   ]
+// }
+// setTimeout(() => {
+//   renderer.render(vnodeNew4, document.getElementById('app'))
+// }, 2000)
 
+export {
+  renderer
+}
