@@ -1,10 +1,20 @@
 import { renderer } from "./renderer-design.js"
 const MyComponent = {
   name: 'MyComponent',
+  data(){
+    return {
+      title: '我是标题',
+    }
+  },
   render(){
     return {
       type: 'div',
-      children: '我是文本内容'
+      children: [
+        {
+          type: 'p',
+          children: `${this.title}`
+        }
+      ]
     }
   }
 }

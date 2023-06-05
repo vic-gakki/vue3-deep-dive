@@ -16,7 +16,7 @@
 // import { ref } from "./primitive-reactive.js";
 
 import { isArray, isObject, getLongSequence } from "./util.js"
-const { effect, ref } = VueReactivity
+const { effect, ref, reactive } = VueReactivity
 
 console.log(getLongSequence([2,3,1,-1]))
 
@@ -402,9 +402,18 @@ const createRenderer = (options) => {
 
   const mountComponent = (vnode, container, anchor) => {
     const componentOptions = vnode.type
-    const {render} = componentOptions
-    const subtree = render()
-    patch(null, subtree, container, anchor)
+    const {render, data} = componentOptions
+    const state = reactive(data())
+    effect(() => {
+      const subtree = render.call(state, state)
+      patch(null, subtree, container, anchor)
+    },{
+      scheduler: queueJob
+    })
+    setTimeout(() => {
+      state.title = '修改后的标题'
+      state.title = '再次修改'
+    }, 1000)
   }
 
   const patchComponent = () => {
@@ -502,6 +511,25 @@ const normalizeClass = classVal => {
   }
 }
 
+// 异步执行更新函数
+const queue = new Set()
+let isFlashing = false
+const p = Promise.resolve()
+
+const queueJob = fn => {
+  queue.add(fn)
+  if(!isFlashing){
+    isFlashing = true
+    p.then(() => {
+      try {
+        queue.forEach(fn => fn())
+      }finally {
+        queue.clear()
+        isFlashing = false
+      }
+    })
+  }
+}
 
 // const vnode = {
 //   type: 'h1',
