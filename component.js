@@ -2,29 +2,24 @@ import { renderer } from "./renderer-design.js"
 const {ref} = VueReactivity
 const MyComponent = {
   name: 'MyComponent',
-  setup(props, {emit}){
-    console.log({props})
-    const count = ref(0)
-    const onClick = () => {
-      emit('click')
-    }
-    return {
-      count,
-      onClick
-    }
+  setup(props, {slots}){
+    console.log({slots})
   },
   render(){
     return {
       type: 'div',
       children: [
         {
-          type: 'p',
-          children: `${this.count.value}`,
-          props: {
-            onClick: () => {
-              this.onClick()
-            }
-          }
+          type: 'header',
+          children: [this.$slots.header()],
+        },
+        {
+          type: 'main',
+          children: [this.$slots.main()],
+        },
+        {
+          type: 'footer',
+          children: [this.$slots.footer()],
         }
       ]
     }
@@ -33,9 +28,24 @@ const MyComponent = {
 
 const compVnode = {
   type: MyComponent,
-  props: {
-    onClick(){
-      console.log('click')
+  children: {
+    header(){
+      return {
+        type: 'h1',
+        children: '我是标题'
+      }
+    },
+    main(){
+      return {
+        type: 'section',
+        children: '我是内容'
+      }
+    },
+    footer(){
+      return {
+        type: 'p',
+        children: '我是注脚'
+      }
     }
   }
 }

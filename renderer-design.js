@@ -407,11 +407,13 @@ const createRenderer = (options) => {
     beforeCreate && beforeCreate()
     const state = data ? reactive(data()) : null
     const [props, attrs] = resolveProps(componentOptions.props, vnode.props)
+    const slots = vnode.children || {}
     const instance = {
       state,
       props: shallowReactive(props),
       isMounted: false,
-      subtree: null
+      subtree: null,
+      slots
     }
     vnode.component = instance
 
@@ -426,7 +428,7 @@ const createRenderer = (options) => {
     }
 
 
-    const setupContext = {attrs, emit}
+    const setupContext = {attrs, emit, slots}
     let setupState = null
     const setupResult = setup(shallowReadonly(instance.props), setupContext)
     if(typeof setupResult === 'function'){
@@ -440,8 +442,10 @@ const createRenderer = (options) => {
 
     const renderContext = new Proxy(instance, {
       get(target, key, receiver){
-        const {state, props} = target
-        if(state && key in state){
+        const {state, props, slots} = target
+        if(key === '$slots'){
+          return slots
+        }else if(state && key in state){
           return state[key]
         }else if(key in props){
           return props[key]
