@@ -16,7 +16,7 @@
 // import { ref } from "./primitive-reactive.js";
 
 import { isArray, isObject, getLongSequence } from "./util.js"
-const { effect, ref, reactive, shallowReactive } = VueReactivity
+const { effect, ref, reactive, shallowReactive, shallowReadonly } = VueReactivity
 
 console.log(getLongSequence([2,3,1,-1]))
 
@@ -403,9 +403,9 @@ const createRenderer = (options) => {
 
   const mountComponent = (vnode, container, anchor) => {
     const componentOptions = vnode.type
-    const {render, data, beforeCreate, created, beforeMount, mounted, beforeUpdate, updated} = componentOptions
+    let {render, data, beforeCreate, created, beforeMount, mounted, beforeUpdate, updated, setup} = componentOptions
     beforeCreate && beforeCreate()
-    const state = reactive(data())
+    const state = data ? reactive(data()) : null
     const [props, attrs] = resolveProps(componentOptions.props, vnode.props)
     const instance = {
       state,
@@ -415,6 +415,18 @@ const createRenderer = (options) => {
     }
     vnode.component = instance
 
+    const setupContext = {attrs}
+    let setupState = null
+    const setupResult = setup(shallowReadonly(instance.props, setupContext))
+    if(typeof setupResult === 'function'){
+      if(render){
+        console.warn('setup 函数返回渲染函数，render选项将被忽略')
+      }
+      render = setupResult
+    }else {
+      setupState = setupResult
+    }
+
     const renderContext = new Proxy(instance, {
       get(target, key, receiver){
         const {state, props} = target
@@ -422,6 +434,8 @@ const createRenderer = (options) => {
           return state[key]
         }else if(key in props){
           return props[key]
+        }else if(setupState && key in setupState){
+          return setupState[key]
         }else {
           console.warn(`${key} not defined in current instance: ${instance}`)
         }
@@ -432,6 +446,8 @@ const createRenderer = (options) => {
           state[key] = value
         }else if(key in props){
           console.warn('Attempting to mutate props "${key}". Props are readonly')
+        }else if(setupState && key in setupState){
+          setupState[key] = value
         }else {
           console.warn(`${key} not defined in current instance: ${instance}`)
         }

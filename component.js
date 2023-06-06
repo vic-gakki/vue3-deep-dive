@@ -1,16 +1,12 @@
 import { renderer } from "./renderer-design.js"
+const {ref} = VueReactivity
 const MyComponent = {
   name: 'MyComponent',
-  data(){
+  setup(){
+    const count = ref(0)
     return {
-      title: '我是标题',
+      count
     }
-  },
-  created(){
-    console.log('created')
-  },
-  updated(){
-    console.log('updated')
   },
   render(){
     return {
@@ -18,7 +14,7 @@ const MyComponent = {
       children: [
         {
           type: 'p',
-          children: `${this.title}`
+          children: `${this.count.value}`
         }
       ]
     }
