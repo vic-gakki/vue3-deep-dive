@@ -2,10 +2,15 @@ import { renderer } from "./renderer-design.js"
 const {ref} = VueReactivity
 const MyComponent = {
   name: 'MyComponent',
-  setup(){
+  setup(props, {emit}){
+    console.log({props})
     const count = ref(0)
+    const onClick = () => {
+      emit('click')
+    }
     return {
-      count
+      count,
+      onClick
     }
   },
   render(){
@@ -14,7 +19,12 @@ const MyComponent = {
       children: [
         {
           type: 'p',
-          children: `${this.count.value}`
+          children: `${this.count.value}`,
+          props: {
+            onClick: () => {
+              this.onClick()
+            }
+          }
         }
       ]
     }
@@ -22,6 +32,11 @@ const MyComponent = {
 }
 
 const compVnode = {
-  type: MyComponent
+  type: MyComponent,
+  props: {
+    onClick(){
+      console.log('click')
+    }
+  }
 }
 renderer.render(compVnode, document.getElementById('app'))

@@ -415,9 +415,20 @@ const createRenderer = (options) => {
     }
     vnode.component = instance
 
-    const setupContext = {attrs}
+    const emit = (name, ...payload) => {
+      const eventName = `on${name[0].toUpperCase() + name.slice(1)}`
+      const handler = instance.props[eventName]
+      if(handler){
+        handler(...payload)
+      }else {
+        console.warn(`No such event handler: ${eventName}`)
+      }
+    }
+
+
+    const setupContext = {attrs, emit}
     let setupState = null
-    const setupResult = setup(shallowReadonly(instance.props, setupContext))
+    const setupResult = setup(shallowReadonly(instance.props), setupContext)
     if(typeof setupResult === 'function'){
       if(render){
         console.warn('setup 函数返回渲染函数，render选项将被忽略')
@@ -471,10 +482,6 @@ const createRenderer = (options) => {
     },{
       scheduler: queueJob
     })
-    setTimeout(() => {
-      state.title = '修改后的标题'
-      state.title = '再次修改'
-    }, 1000)
   }
 
   const patchComponent = (n1, n2) => {
@@ -493,11 +500,11 @@ const createRenderer = (options) => {
     }
   }
 
-  const resolveProps = (propsOptions, propsData) => {
+  const resolveProps = (propsOptions = {}, propsData = {}) => {
     const props = {}
     const attrs = {}
     for(let key in propsData){
-      if(key in propsOptions){
+      if(key in propsOptions || key.startsWith('on')){
         props[key] = propsData[key]
       }else {
         attrs[key] = propsData[key]
