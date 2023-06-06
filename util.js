@@ -27,6 +27,7 @@ const isMap = isTypeFactory('Map')
 const isWeakMap = isTypeFactory('WeakMap')
 const isWeakSet = isTypeFactory('WeakSet')
 const isObject = isTypeFactory('Object')
+const isFunction = isTypeFactory('Function')
 
 const isSame = (oldVal, newVal) => {
   return (oldVal === newVal) || (oldVal !== oldVal && newVal !== newVal)
@@ -83,5 +84,6 @@ export {
   isWeakSet,
   isSame,
   isObject,
+  isFunction,
   getLongSequence
 }

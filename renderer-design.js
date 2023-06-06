@@ -15,7 +15,7 @@
 // import { effect } from "./reactive.js";
 // import { ref } from "./primitive-reactive.js";
 
-import { isArray, isObject, getLongSequence } from "./util.js"
+import { isArray, isObject, isFunction getLongSequence } from "./util.js"
 const { effect, ref, reactive, shallowReactive, shallowReadonly } = VueReactivity
 
 console.log(getLongSequence([2,3,1,-1]))
@@ -78,7 +78,7 @@ const createRenderer = (options) => {
       } else {
         patchElement(n1, n2)
       }
-    } else if (isObject(type)) {
+    } else if (isObject(type) || isFunction(type)) {
       if (!n1) {
         mountComponent(n2, container, anchor)
       } else {
@@ -419,7 +419,15 @@ const createRenderer = (options) => {
   }
 
   const mountComponent = (vnode, container, anchor) => {
-    const componentOptions = vnode.type
+    let componentOptions
+    if(isFunction(vnode.type)){
+      componentOptions = {
+        render: vnode.type,
+        props: vnode.type.props
+      }
+    }else {
+      componentOptions = vnode.type
+    }
     let {render, data, beforeCreate, created, beforeMount, mounted, beforeUpdate, updated, setup} = componentOptions
     beforeCreate && beforeCreate()
     const state = data ? reactive(data()) : null
