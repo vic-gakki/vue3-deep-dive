@@ -34,6 +34,19 @@ console.log(getLongSequence([2,3,1,-1]))
 const Text = Symbol()
 const Comment = Symbol()
 const Fragment = Symbol()
+let currentInstance = null
+const setCurrentInstance = inst => {
+  currentInstance = inst
+}
+
+
+const onMounted = callback => {
+  if(currentInstance){
+    currentInstance.mounted.push(callback)
+  }else {
+    console.warn('can not call onMounted method outside setup function')
+  }
+}
 
 const createRenderer = (options) => {
   const { insert, setElementText, createElement, patchProps, remove, createText, setText, createComment } = options
@@ -413,7 +426,8 @@ const createRenderer = (options) => {
       props: shallowReactive(props),
       isMounted: false,
       subtree: null,
-      slots
+      slots,
+      mounted: [],
     }
     vnode.component = instance
 
@@ -430,7 +444,9 @@ const createRenderer = (options) => {
 
     const setupContext = {attrs, emit, slots}
     let setupState = null
+    setCurrentInstance(instance)
     const setupResult = setup(shallowReadonly(instance.props), setupContext)
+    setCurrentInstance(null)
     if(typeof setupResult === 'function'){
       if(render){
         console.warn('setup 函数返回渲染函数，render选项将被忽略')
@@ -475,7 +491,7 @@ const createRenderer = (options) => {
       if(!instance.isMounted){
         beforeMount && beforeMount.call(renderContext)
         patch(null, subtree, container, anchor)
-        mounted && mounted.call(renderContext)
+        instance.mounted.forEach(fn => fn.call(renderContext))
         instance.isMounted = true
       }else {
         beforeUpdate && beforeUpdate.call(renderContext)
@@ -993,5 +1009,6 @@ const queueJob = fn => {
 // }, 2000)
 
 export {
-  renderer
+  renderer,
+  onMounted
 }

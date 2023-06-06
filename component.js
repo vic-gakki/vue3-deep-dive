@@ -1,9 +1,14 @@
-import { renderer } from "./renderer-design.js"
+import { renderer, onMounted } from "./renderer-design.js"
 const {ref} = VueReactivity
 const MyComponent = {
   name: 'MyComponent',
-  setup(props, {slots}){
-    console.log({slots})
+  setup(){
+    onMounted(() => {
+      console.log('on mounted 1')
+    })
+    onMounted(function(){
+      console.log('on mounted 2', this.$slots)
+    })
   },
   render(){
     return {
