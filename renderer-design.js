@@ -410,6 +410,10 @@ const createRenderer = (options) => {
       vnode.children(v => unmount(v))
       return
     }
+    if(isObject(vnode.type)){
+      unmount(vnode.component.subtree)
+      return
+    }
     const parent = vnode.el.parentNode
     remove(vnode.el, parent)
   }
@@ -1010,5 +1014,7 @@ const queueJob = fn => {
 
 export {
   renderer,
-  onMounted
+  onMounted,
+  Text,
+  Comment,
 }
