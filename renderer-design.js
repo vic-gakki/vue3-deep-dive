@@ -16,7 +16,7 @@
 // import { ref } from "./primitive-reactive.js";
 
 import { isArray, isObject, getLongSequence } from "./util.js"
-const { effect, ref, reactive } = VueReactivity
+const { effect, ref, reactive, shallowReactive } = VueReactivity
 
 console.log(getLongSequence([2,3,1,-1]))
 
@@ -404,27 +404,52 @@ const createRenderer = (options) => {
   const mountComponent = (vnode, container, anchor) => {
     const componentOptions = vnode.type
     const {render, data, beforeCreate, created, beforeMount, mounted, beforeUpdate, updated} = componentOptions
-    beforeCreate && beforeCreate.call(state)
+    beforeCreate && beforeCreate()
     const state = reactive(data())
+    const [props, attrs] = resolveProps(componentOptions.props, vnode.props)
     const instance = {
       state,
+      props: shallowReactive(props),
       isMounted: false,
       subtree: null
     }
     vnode.component = instance
 
-    created && created.call(state)
+    const renderContext = new Proxy(instance, {
+      get(target, key, receiver){
+        const {state, props} = target
+        if(state && key in state){
+          return state[key]
+        }else if(key in props){
+          return props[key]
+        }else {
+          console.warn(`${key} not defined in current instance: ${instance}`)
+        }
+      },
+      set(target, key, value, receiver){
+        const {state, props} = target
+        if(state && key in state){
+          state[key] = value
+        }else if(key in props){
+          console.warn('Attempting to mutate props "${key}". Props are readonly')
+        }else {
+          console.warn(`${key} not defined in current instance: ${instance}`)
+        }
+      }
+    })
+
+    created && created.call(renderContext)
     effect(() => {
-      const subtree = render.call(state, state)
+      const subtree = render.call(renderContext, renderContext)
       if(!instance.isMounted){
-        beforeMount && beforeMount.call(state)
+        beforeMount && beforeMount.call(renderContext)
         patch(null, subtree, container, anchor)
-        mounted && mounted.call(state)
+        mounted && mounted.call(renderContext)
         instance.isMounted = true
       }else {
-        beforeUpdate && beforeUpdate.call(state)
+        beforeUpdate && beforeUpdate.call(renderContext)
         patch(instance.subtree, subtree, container, anchor)
-        updated && updated.call(state)
+        updated && updated.call(renderContext)
       }
       instance.subtree = subtree
     },{
@@ -436,10 +461,48 @@ const createRenderer = (options) => {
     }, 1000)
   }
 
-  const patchComponent = () => {
-
+  const patchComponent = (n1, n2) => {
+    const instance = n2.component = n1.component
+    const {props} = instance
+    const [nextProps] = resolveProps(n2.type.props, n2.props)
+    if(hasPropsChanged(n1.props, n2.props)){
+      for(let key in nextProps){
+        props[key] = nextProps[key]
+      }
+      for(let key in props){
+        if(!(key in nextProps)){
+          delete props[key]
+        }
+      }
+    }
   }
 
+  const resolveProps = (propsOptions, propsData) => {
+    const props = {}
+    const attrs = {}
+    for(let key in propsData){
+      if(key in propsOptions){
+        props[key] = propsData[key]
+      }else {
+        attrs[key] = propsData[key]
+      }
+    }
+    return [props, attrs]
+  }
+
+  const hasPropsChanged = (prevProps, nextProps) => {
+    const nextKeys = Object.keys(nextProps)
+    if(nextKeys.length !== Object.keys(prevProps).length){
+      return true
+    }
+    for(let i = 0; i < nextKeys.length; i++){
+      const key = nextKeys[i]
+      if(nextProps[key] !== prevProps[key]){
+        return true
+      }
+    }
+    return false
+  }
 
   return {
     render,
