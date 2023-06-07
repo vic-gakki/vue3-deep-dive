@@ -15,7 +15,7 @@
 // import { effect } from "./reactive.js";
 // import { ref } from "./primitive-reactive.js";
 
-import { isArray, isObject, isFunction getLongSequence } from "./util.js"
+import { isArray, isObject, isFunction, getLongSequence } from "./util.js"
 const { effect, ref, reactive, shallowReactive, shallowReadonly } = VueReactivity
 
 console.log(getLongSequence([2,3,1,-1]))
@@ -420,7 +420,8 @@ const createRenderer = (options) => {
 
   const mountComponent = (vnode, container, anchor) => {
     let componentOptions
-    if(isFunction(vnode.type)){
+    const isFunctional = isFunction(vnode.type)
+    if(isFunctional){
       componentOptions = {
         render: vnode.type,
         props: vnode.type.props
@@ -453,21 +454,21 @@ const createRenderer = (options) => {
       }
     }
 
-
     const setupContext = {attrs, emit, slots}
     let setupState = null
-    setCurrentInstance(instance)
-    const setupResult = setup(shallowReadonly(instance.props), setupContext)
-    setCurrentInstance(null)
-    if(typeof setupResult === 'function'){
-      if(render){
-        console.warn('setup 函数返回渲染函数，render选项将被忽略')
+    if(setup){
+      setCurrentInstance(instance)
+      const setupResult = setup(shallowReadonly(instance.props), setupContext)
+      setCurrentInstance(null)
+      if(typeof setupResult === 'function'){
+        if(render){
+          console.warn('setup 函数返回渲染函数，render选项将被忽略')
+        }
+        render = setupResult
+      }else {
+        setupState = setupResult
       }
-      render = setupResult
-    }else {
-      setupState = setupResult
     }
-
     const renderContext = new Proxy(instance, {
       get(target, key, receiver){
         const {state, props, slots} = target
@@ -499,7 +500,7 @@ const createRenderer = (options) => {
 
     created && created.call(renderContext)
     effect(() => {
-      const subtree = render.call(renderContext, renderContext)
+      const subtree = isFunctional ? render(props) : render.call(renderContext, renderContext)
       if(!instance.isMounted){
         beforeMount && beforeMount.call(renderContext)
         patch(null, subtree, container, anchor)

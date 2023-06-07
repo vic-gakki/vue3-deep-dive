@@ -73,67 +73,105 @@ const defineAsyncComponent = options => {
             ? {type: asyncComp}
             : (loading.value && loadingComponent)
               ? {type: loadingComponent}
-              : {type: placeholder}
+              : placeholder
       }
     }
   }
 }
 
 
-
-
+// async component
 const MyComponent = {
   name: 'MyComponent',
-  setup(){
-    onMounted(() => {
-      console.log('on mounted 1')
-    })
-    onMounted(function(){
-      console.log('on mounted 2', this.$slots)
-    })
-  },
   render(){
     return {
       type: 'div',
       children: [
         {
-          type: 'header',
-          children: [this.$slots.header()],
+          type: 'span',
+          children: '我是'
         },
         {
-          type: 'main',
-          children: [this.$slots.main()],
+          type: 'strong',
+          children: '异步加载'
         },
         {
-          type: 'footer',
-          children: [this.$slots.footer()],
+          type: 'span',
+          children: '组件'
         }
       ]
     }
   }
 }
 
-const compVnode = {
-  type: MyComponent,
-  children: {
-    header(){
-      return {
-        type: 'h1',
-        children: '我是标题'
-      }
-    },
-    main(){
-      return {
-        type: 'section',
-        children: '我是内容'
-      }
-    },
-    footer(){
-      return {
-        type: 'p',
-        children: '我是注脚'
+const Loading = {
+  name: 'Loading',
+  render(){
+    return {
+      type: 'div',
+      children: 'loading...'
+    }
+  }
+}
+
+const ErrorComponent = {
+  name: 'ErrorComponent',
+  props: {
+    error: Error
+  },
+  render(){
+    return {
+      type: 'div',
+      children: `error: ${this.error.message}`,
+      props: {
+        style: 'color: red'
       }
     }
   }
 }
-renderer.render(compVnode, document.getElementById('app'))
+
+const compVnode = {
+  type: defineAsyncComponent({
+    loader(){
+      return new Promise((resolve) => {
+        setTimeout(() => resolve(MyComponent), 4000)
+      })
+    },
+    delay: 1000,
+    timeout: 3000,
+    loadingComponent: Loading,
+    errorComponent: ErrorComponent,
+  }),
+}
+
+
+// functional component
+
+const functional = (props) => {
+  return {
+    type: 'div',
+    children: [
+      {
+        type: 'p',
+        children: `这是functional component,没有自己的状态，可以接受props`
+      },
+      {
+        type: 'pre',
+        children: `${Object.entries(props).map(([key, value]) => key + ':' + value).join('\n')}`
+      }
+    ]
+  }
+}
+functional.props = {
+  key1: String,
+  key2: String
+}
+
+const funComp = {
+  type: functional,
+  props: {
+    key1: 'value1',
+    key2: 'value2'
+  }
+}
+renderer.render(funComp, document.getElementById('app'))
