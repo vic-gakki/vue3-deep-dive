@@ -83,6 +83,10 @@ const defineAsyncComponent = options => {
 const KeepAlive = {
   name: 'KeepAlive',
   __isKeepAlive: true,
+  props: {
+    includes: RegExp,
+    excludes: RegExp
+  },
   setup(props, {slots}){
     const instance = getCurrentInstance()
     const {move, createElement} = instance.keepAliveCtx
@@ -97,6 +101,15 @@ const KeepAlive = {
     return () => {
       const rawNode = slots.default()
       if(!isComponentVnode(rawNode)){
+        return rawNode
+      }
+      const name = rawNode.type.name
+      if(name && 
+        (
+          (props.includes && !props.includes.test(name)) ||
+          (props.excludes && props.excludes.test(name))
+        )
+      ){
         return rawNode
       }
       const vnode = cache.get(rawNode.type)
@@ -243,6 +256,9 @@ const KeepAliveComp = {
                     type: toggle.value ? Loading : MyComponent
                   }
                 }
+              },
+              props: {
+                excludes: /^(MyComponent|Loading)$/
               }
             }
           ]
