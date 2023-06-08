@@ -33,6 +33,10 @@ const isSame = (oldVal, newVal) => {
   return (oldVal === newVal) || (oldVal !== oldVal && newVal !== newVal)
 }
 
+const isComponentVnode = vnode => {
+  return isObject(vnode.type) || isFunction(vnode.type)
+}
+
 const getLongSequence = arr => {
   const p = arr.slice()
   const result = [0]
@@ -85,5 +89,6 @@ export {
   isSame,
   isObject,
   isFunction,
-  getLongSequence
+  getLongSequence,
+  isComponentVnode
 }

@@ -15,7 +15,7 @@
 // import { effect } from "./reactive.js";
 // import { ref } from "./primitive-reactive.js";
 
-import { isArray, isObject, isFunction, getLongSequence } from "./util.js"
+import { isArray, isObject, isFunction, getLongSequence, isComponentVnode } from "./util.js"
 const { effect, ref, reactive, shallowReactive, shallowReadonly } = VueReactivity
 
 console.log(getLongSequence([2,3,1,-1]))
@@ -38,6 +38,7 @@ let currentInstance = null
 const setCurrentInstance = inst => {
   currentInstance = inst
 }
+const getCurrentInstance = () => currentInstance
 
 
 const onMounted = callback => {
@@ -78,9 +79,13 @@ const createRenderer = (options) => {
       } else {
         patchElement(n1, n2)
       }
-    } else if (isObject(type) || isFunction(type)) {
+    } else if (isComponentVnode(n2)) {
       if (!n1) {
-        mountComponent(n2, container, anchor)
+        if(n2.keptAlive){
+          n2._keepAliveInstance._activate(n2, container, anchor)
+        }else {
+          mountComponent(n2, container, anchor)
+        }
       } else {
         patchComponent(n1, n2)
       }
@@ -410,8 +415,12 @@ const createRenderer = (options) => {
       vnode.children(v => unmount(v))
       return
     }
-    if(isObject(vnode.type)){
-      unmount(vnode.component.subtree)
+    if(isComponentVnode(vnode)){
+      if(vnode.shouldKeepAlive){
+        vnode._keepAliveInstance._deActivate(vnode)
+      }else {
+        unmount(vnode.component.subtree)
+      }
       return
     }
     const parent = vnode.el.parentNode
@@ -419,6 +428,7 @@ const createRenderer = (options) => {
   }
 
   const mountComponent = (vnode, container, anchor) => {
+    console.log('mountComponent', vnode)
     let componentOptions
     const isFunctional = isFunction(vnode.type)
     if(isFunctional){
@@ -429,7 +439,7 @@ const createRenderer = (options) => {
     }else {
       componentOptions = vnode.type
     }
-    let {render, data, beforeCreate, created, beforeMount, mounted, beforeUpdate, updated, setup} = componentOptions
+    let {render, data, beforeCreate, created, beforeMount, mounted, beforeUpdate, updated, setup, __isKeepAlive} = componentOptions
     beforeCreate && beforeCreate()
     const state = data ? reactive(data()) : null
     const [props, attrs] = resolveProps(componentOptions.props, vnode.props)
@@ -442,6 +452,16 @@ const createRenderer = (options) => {
       slots,
       mounted: [],
     }
+
+    if(__isKeepAlive){
+      instance.keepAliveCtx = {
+        move(vnode, container, anchor){
+          insert(vnode.component.subtree.el, container, anchor)
+        },
+        createElement
+      }
+    }
+
     vnode.component = instance
 
     const emit = (name, ...payload) => {
@@ -1026,4 +1046,5 @@ export {
   onMounted,
   Text,
   Comment,
+  getCurrentInstance
 }

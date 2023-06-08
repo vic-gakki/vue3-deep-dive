@@ -1,4 +1,5 @@
-import { renderer, onMounted, Comment} from "./renderer-design.js"
+import { renderer, onMounted, Comment, getCurrentInstance } from "./renderer-design.js"
+import { isComponentVnode, isFunction, isObject } from "./util.js"
 const {ref, shallowRef} = VueReactivity
 
 const defineAsyncComponent = options => {
@@ -78,6 +79,42 @@ const defineAsyncComponent = options => {
     }
   }
 }
+
+const KeepAlive = {
+  name: 'KeepAlive',
+  __isKeepAlive: true,
+  setup(props, {slots}){
+    const instance = getCurrentInstance()
+    const {move, createElement} = instance.keepAliveCtx
+    const cache = new Map()
+    const storeContainer = createElement('div')
+    instance._deActivate = vnode => {
+      move(vnode, storeContainer)
+    }
+    instance._activate = (vnode, container, anchor) => {
+      move(vnode, container, anchor)
+    }
+    return () => {
+      const rawNode = slots.default()
+      if(!isComponentVnode(rawNode)){
+        return rawNode
+      }
+      const vnode = cache.get(rawNode.type)
+      rawNode._keepAliveInstance = instance
+      rawNode.shouldKeepAlive = true
+      if(vnode){
+        rawNode.component = vnode.component
+        rawNode.keptAlive = true
+      }else {
+        cache.set(rawNode.type, rawNode)
+      }
+      return rawNode
+    }
+  }
+
+}
+
+
 
 
 // async component
@@ -174,4 +211,45 @@ const funComp = {
     key2: 'value2'
   }
 }
-renderer.render(funComp, document.getElementById('app'))
+
+
+
+// keep-alive component
+
+const KeepAliveComp = {
+  type: {
+    name: 'test',
+    setup(){
+      const toggle = ref(false)
+      const onClick = () => {
+        toggle.value = !toggle.value
+      }
+      return () => {
+        return {
+          type: 'div',
+          children: [
+            {
+              type: 'button',
+              props: {
+                onClick
+              },
+              children: 'click me'
+            },
+            {
+              type: KeepAlive,
+              children: {
+                default(){
+                  return {
+                    type: toggle.value ? Loading : MyComponent
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}
+
+renderer.render(KeepAliveComp, document.getElementById('app'))
