@@ -79,6 +79,15 @@ const createRenderer = (options) => {
       } else {
         patchElement(n1, n2)
       }
+    } else if(isObject(type) && type.__isTeleport){
+      // teleport组件
+      type.process(n1, n2, container, anchor, {
+        patch,
+        patchChildren,
+        move(vnode, container, anchor){
+          insert(isComponentVnode(vnode) ? vnode.component.subtree.el : vnode.el, container, anchor)
+        }
+      })
     } else if (isComponentVnode(n2)) {
       if (!n1) {
         if(n2.keptAlive){
@@ -428,7 +437,6 @@ const createRenderer = (options) => {
   }
 
   const mountComponent = (vnode, container, anchor) => {
-    console.log('mountComponent', vnode)
     let componentOptions
     const isFunctional = isFunction(vnode.type)
     if(isFunctional){
@@ -461,7 +469,7 @@ const createRenderer = (options) => {
         createElement
       }
     }
-
+  
     vnode.component = instance
 
     const emit = (name, ...payload) => {

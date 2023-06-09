@@ -128,6 +128,39 @@ const KeepAlive = {
 }
 
 
+const Teleport = {
+  name: 'Teleport',
+  __isTeleport: true,
+  process(n1, n2, container, anchor, context){
+    const {
+      patch,
+      patchChildren,
+      move
+    } = context
+
+    const getTarget = to => {
+      if(!to){
+        return container
+      }
+      if(typeof to === 'string'){
+        return document.querySelector(to)
+      }
+      return to
+    }
+    const target = getTarget(n2.props.to)
+    if(!n1){
+      // 挂载teleport
+      n2.children.forEach(c => patch(null, c, target, anchor))
+    }else {
+      // 更新
+      patchChildren(n1, n2, container)
+      if(n2.props.to !== n1.props.to){
+        n2.children.forEach(c => move(c, target))
+      }
+    }
+  }
+}
+
 
 
 // async component
@@ -268,4 +301,53 @@ const KeepAliveComp = {
   }
 }
 
-renderer.render(KeepAliveComp, document.getElementById('app'))
+
+// teleport
+
+const teleComp = {
+  type: {
+    setup(){
+      const to = ref('body')
+      const onClick = () => {
+        to.value = 'html'
+      }
+      return () => {
+        return {
+          type: 'div',
+          children: [
+            {
+              type: 'button',
+              children: 'Click me',
+              props: {
+                onClick
+              }
+            },
+            {
+              type: 'p',
+              children: '非teleport元素'
+            },
+            {
+              type: Teleport,
+              props: {
+                to: to.value
+              },
+              children: [
+                {
+                  type: 'h1',
+                  children: `我是h1 - teleport to ${to.value}`
+                },
+                {
+                  type: 'h2',
+                  children: `我是h2 - teleport to ${to.value}`
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  },
+  
+}
+
+renderer.render(teleComp, document.getElementById('app'))
