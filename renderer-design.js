@@ -68,7 +68,7 @@ const createRenderer = (options) => {
   }
 
   const patch = (n1, n2, container, anchor) => {
-    if (n1 && n1.type !== n2.type) {
+    if (n1 && (n1.type !== n2.type || n1.key !== n2.key)) {
       unmount(n1)
       n1 = null
     }
@@ -132,6 +132,8 @@ const createRenderer = (options) => {
 
   const mountElement = (vnode, container, anchor) => {
     const el = vnode.el = createElement(vnode.type)
+    const needTransion = !!vnode.transition
+    const {beforeEnter, enter} = vnode.transition || {}
     if (typeof vnode.children === 'string') {
       setElementText(el, vnode.children)
     } else if (isArray(vnode.children)) {
@@ -142,9 +144,15 @@ const createRenderer = (options) => {
         patchProps(el, key, null, value)
       }
     }
+    if(needTransion){
+      beforeEnter(el)
+    }
     insert(el, container, anchor)
+    if(needTransion){
+      enter(el)
+    }
   }
-
+  
   const patchElement = (n1, n2) => {
     const el = n2.el = n1.el
     const props = n2.props
@@ -433,7 +441,15 @@ const createRenderer = (options) => {
       return
     }
     const parent = vnode.el.parentNode
-    remove(vnode.el, parent)
+    const needTransion = !!vnode.transition
+    const performRemove = () => {
+      remove(vnode.el, parent)
+    }
+    if(needTransion){
+      vnode.transition.leave(vnode.el, performRemove)
+    }else {
+      performRemove()
+    }
   }
 
   const mountComponent = (vnode, container, anchor) => {

@@ -2,6 +2,12 @@ import { renderer, onMounted, Comment, getCurrentInstance } from "./renderer-des
 import { isComponentVnode, isFunction, isObject } from "./util.js"
 const {ref, shallowRef} = VueReactivity
 
+const nextFrame = fn => {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(fn)
+  })
+}
+
 const defineAsyncComponent = options => {
   return {
     name: 'AsyncComponentWrapper',
@@ -161,6 +167,49 @@ const Teleport = {
   }
 }
 
+
+
+const Transition = {
+  name: 'Transition',
+  __isTransition: true,
+  setup(props, {slots}){
+    return () => {
+      const vnode = slots.default()
+      vnode.transition = {
+        beforeEnter(el){
+          el.classList.add('enter-from')
+          el.classList.add('enter-active')
+        },
+        enter(el){
+          nextFrame(() => {
+            el.classList.remove('enter-from')
+            el.classList.add('enter-to')
+            el.addEventListener('transitionend', () => {
+              el.classList.remove('enter-active')
+              el.classList.remove('enter-to')
+            })
+          })
+        },
+        leave(el, performRemove){
+          el.classList.add('leave-from')
+          el.classList.add('leave-active')
+          // 强制reflow, 使得初始状态生效
+          document.body.offsetHeight
+          nextFrame(() => {
+            el.classList.remove('leave-from')
+            el.classList.add('leave-to')
+            el.addEventListener('transitionend', () => {
+              el.classList.remove('leave-active')
+              el.classList.remove('leave-to')
+              performRemove()
+            })
+          })
+        }
+      }
+      return vnode
+    }
+  }
+}
 
 
 // async component
@@ -350,4 +399,53 @@ const teleComp = {
   
 }
 
-renderer.render(teleComp, document.getElementById('app'))
+const transitionComp = {
+  type: {
+    name: 'TransitionTest',
+    setup(){
+      const toggle = ref(true)
+      const onClick = () => {
+        toggle.value = !toggle.value
+      }
+      return () => {
+        return {
+          type: 'div',
+          children: [
+            {
+              type: 'button',
+              children: 'Click me',
+              props: {
+                onClick
+              }
+            },
+            {
+              type: Transition,
+              children: {
+                default(){
+                  return toggle.value ? {
+                    type: 'div',
+                    children: 'children 1',
+                    key: 1,
+                    props: {
+                      class: 'box'
+                    }
+                  } : {
+                    type: 'div',
+                    children: 'children 2',
+                    key: 2,
+                    props: {
+                      class: 'box'
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}
+
+
+renderer.render(transitionComp, document.getElementById('app'))

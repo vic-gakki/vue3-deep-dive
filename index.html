@@ -5,10 +5,70 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Document</title>
+  <style>
+    .box {
+      width: 100px;
+      height: 100px;
+      background-color: red;
+    }
+    .enter-from {
+      transform: translateX(200px);
+    }
+    .enter-active {
+      transition: transform 1s ease-in-out;
+    }
+    .enter-to {
+      transform: translateX(0);
+    }
+    .leave-from {
+      transform: translateX(0);
+      /* opacity: 1; */
+    }
+    .leave-active {
+      transition: all 1s ease-in-out;
+      position: absolute;
+    }
+    .leave-to {
+      transform: translateX(200px);
+      /* opacity: 0; */
+    }
+  </style>
 </head>
 <body>
   <div id="app"></div>
   <script src="https://unpkg.com/@vue/reactivity@3.0.5/dist/reactivity.global.js"></script>
   <script src="./component.js" type="module"></script>
+  <!-- <script>
+    const el = document.createElement('div')
+    el.classList.add('box')
+    el.classList.add('enter-from')
+    el.classList.add('enter-active')
+    
+    document.body.appendChild(el)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        el.classList.remove('enter-from')
+        el.classList.add('enter-to')
+        el.addEventListener('transitionend', () => {
+          el.classList.remove('enter-active')
+          el.classList.remove('enter-to')
+        })
+      })
+    })
+
+    el.addEventListener('click', () => {
+      el.classList.add('leave-from')
+      el.classList.add('leave-active')
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          el.classList.remove('leave-from')
+          el.classList.add('leave-to')
+          el.addEventListener('transitionend', () => {
+            el.parentNode.removeChild(el)
+          })
+        })
+      })
+    })
+  </script> -->
 </body>
 </html>
