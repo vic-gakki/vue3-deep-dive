@@ -86,6 +86,44 @@ const tokenize = str => {
   return tokens
 }
 
-const str = '<p>Vue</p>'
-const res = tokenize(str)
-console.log(res)
+const templateAST = tokens => {
+  const root = {
+    type: 'Root',
+    children: []
+  }
+  const tokenStack = [root]
+  for(let i = 0; i < tokens.length; i++){
+    const token = tokens[i]
+    const parent = tokenStack[tokenStack.length - 1]
+    if(token.type === 'tag'){
+      const node = {
+        type: 'Element',
+        tag: token.name,
+        children: []
+      }
+      parent.children.push(node)
+      tokenStack.push(node)
+    }else if(token.type === 'text'){
+      parent.children.push({
+        type: 'Text',
+        content: token.content
+      })
+    }else if(token.type === 'tagEnd'){
+      const node = tokenStack.pop()
+      if(node.tag !== token.name){
+        console.warn('mismatched tag')
+      }
+    }
+  }
+  return root
+}
+
+const parse = str => {
+  const tokens = tokenize(str)
+  const ast = templateAST(tokens)
+  return ast
+}
+
+const str = '<div><p>Vue</p><p>Template</p></div>'
+const ast = parse(str)
+console.log(ast)
