@@ -124,6 +124,97 @@ const parse = str => {
   return ast
 }
 
+const transform = ast => {
+  dump(ast)
+  const context = {
+    parent: null,
+    currentNode: null,
+    index: 0,
+    nodeTransforms: [
+      transformTag,
+      transformText
+    ],
+    replaceNode(node){
+      if(context.parent){
+        context.parent.children[context.index] = node
+      }
+      context.currentNode = node
+    },
+    removeNode(){
+      if(context.parent){
+        context.parent.children.splice(context.index, 1)
+      }
+      context.currentNode = null
+    }
+  }
+  tranverseNode(ast, context)
+  console.log('---------------')
+  dump(ast)
+}
+
+
+
+const tranverseNode = (ast, context) => {
+  context.currentNode = ast
+  const {nodeTransforms} = context
+  const exitFns = []
+  for(let i = 0; i < nodeTransforms.length; i++){
+    const exitFn = nodeTransforms[i](context.currentNode, context)
+    if(exitFn){
+      exitFns.unshift(exitFn)
+    }
+    if(context.currentNode === null){
+      return
+    }
+  }
+  const children = ast.children
+  if(children){
+    children.forEach((c, index) => {
+      context.parent = context.currentNode
+      context.index = index
+      tranverseNode(c, context)
+    })
+  }
+  
+  for(let i = 0; i < exitFns.length; i++){
+    exitFns[i](context.currentNode, context)
+  }
+}
+
+// 结构化打印ast
+const dump = (ast, indent = 0) => {
+  const type = ast.type
+  const desc = type === 'Root' 
+    ? '' 
+    : type === 'Element' 
+      ? ast.tag 
+      : type === 'Text' 
+        ? ast.content 
+        : ''
+  console.log(`${'-'.repeat(indent)}${type}: ${desc}`)
+  if(ast.children?.length){
+    ast.children.forEach(c => dump(c, indent + 2))
+  }
+}
+
+// node transformers
+
+const transformTag = (ast, context) => {
+  if(ast.type === 'Element' && ast.tag === 'p'){
+    ast.tag = 'h1'
+  }
+}
+
+const transformText = (ast, context) => {
+  if(ast.type ==='Text'){
+    // context.replaceNode({
+    //   type: 'Element',
+    //   tag: 'span'
+    // })
+    context.removeNode()
+  }
+}
+
 const str = '<div><p>Vue</p><p>Template</p></div>'
 const ast = parse(str)
-console.log(ast)
+transform(ast)
