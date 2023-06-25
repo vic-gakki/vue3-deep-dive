@@ -262,10 +262,10 @@ const createStringLiteral = value => {
   }
 }
 
-const createIdentifier = value => {
+const createIdentifier = name => {
   return {
     type: 'Identifier',
-    value
+    name
   }
 }
 
@@ -284,9 +284,112 @@ const createArrayExpression = (elements) => {
   }
 }
 
+const generate = (ast) => {
+  const context = {
+    code: '',
+    currentIndent: 0,
+    push(code){
+      context.code += code
+    },
+    newLine(){
+      context.push('\n' + '  '.repeat(context.currentIndent))
+    },
+    indent(){
+      context.currentIndent++
+      context.newLine()
+    },
+    dedent(){
+      context.currentIndent--
+      context.newLine()
+    }
+  }
+  genCode(ast, context)
+  return context.code
+}
+
+
+const genCode = (node, context) => {
+  switch(node.type){
+    case 'CallExpression':
+      genCallExpression(node, context)
+      break;
+    case 'FunctionDeclaration':
+      genFunctionDeclaration(node, context)
+      break;
+    case 'StringLiteral':
+      genStringLiteral(node, context)
+      break;
+    case 'ArrayExpression':
+      genArrayExpression(node, context)
+      break;
+    case 'ReturnStatement':
+      genReturnStatement(node, context)
+      break;
+    case 'Identifier':
+      genIdentifier(node, context)
+      break;
+  }
+}
+
+const genCallExpression = (node, context) => {
+  const {push} = context
+  genCode(node.callee, context)
+  push('(')
+  genNodeList(node.arguments, context, () => push(', '))
+  push(')')
+}
+
+const genNodeList = (list, context, seperator) => {
+  list.forEach((node, index) => {
+    genCode(node, context)
+    if(index !== list.length - 1){
+      seperator()
+    }
+  })
+}
+
+const genFunctionDeclaration = (node, context) => {
+  const {push, indent, dedent, newLine} = context
+  genCode(node.id, context)
+  push('(')
+  genNodeList(node.params, context, () => push(', '))
+  push(') {')
+  indent()
+  genNodeList(node.body, context, () => newLine())
+  dedent()
+  push('}')
+}
+
+const genArrayExpression = (node, context) => {
+  const {push} = context
+  push('[')
+  genNodeList(node.elements, context, () => push(', '))
+  push(']')
+}
+
+const genStringLiteral = (node, context) => {
+  const {push} = context
+  push(`'${node.value}'`)
+}
+
+const genIdentifier = (node, context) => {
+  const {push} = context
+  push(node.name)
+}
+
+const genReturnStatement = (node, context) => {
+  const {push} = context
+  push('return ')
+  genCode(node.return, context)
+}
+
+const compile = template => {
+  const ast = parse(template)
+  transform(ast)
+  return generate(ast.jsNode)
+}
 
 
 const str = '<div><p>Vue</p><p>Template</p></div>'
-const ast = parse(str)
-transform(ast)
-console.log(ast.jsNode)
+const res = compile(str)
+console.log(res)
