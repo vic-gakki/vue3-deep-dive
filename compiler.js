@@ -131,7 +131,8 @@ const transform = ast => {
     currentNode: null,
     index: 0,
     nodeTransforms: [
-      transformTag,
+      transformRoot,
+      transformElement,
       transformText
     ],
     replaceNode(node){
@@ -167,7 +168,7 @@ const tranverseNode = (ast, context) => {
       return
     }
   }
-  const children = ast.children
+  const children = context.currentNode.children
   if(children){
     children.forEach((c, index) => {
       context.parent = context.currentNode
@@ -206,15 +207,86 @@ const transformTag = (ast, context) => {
 }
 
 const transformText = (ast, context) => {
-  if(ast.type ==='Text'){
-    // context.replaceNode({
-    //   type: 'Element',
-    //   tag: 'span'
-    // })
-    context.removeNode()
+  // if(ast.type ==='Text'){
+  //   // context.replaceNode({
+  //   //   type: 'Element',
+  //   //   tag: 'span'
+  //   // })
+  //   context.removeNode()
+  // }
+  if(ast.type !== 'Text'){
+    return
+  }
+  ast.jsNode = createStringLiteral(ast.content)
+}
+
+const transformElement = (ast, context) => {
+  return () => {
+    if(ast.type !== 'Element'){
+      return
+    }
+    const callExp = createCallExpression('h', [createStringLiteral(ast.tag)])
+    if(ast.children.length === 1){
+      callExp.arguments.push(ast.children[0].jsNode)
+    }else {
+      callExp.arguments.push(createArrayExpression(ast.children.map(c => c.jsNode)))
+    }
+    ast.jsNode = callExp
   }
 }
+
+const transformRoot = (ast, context) => {
+  return () => {
+    if(ast.type !=='Root'){
+      return
+    }
+    ast.jsNode = {
+      type: 'FunctionDeclaration',
+      id: createIdentifier('render'),
+      params: [],
+      body: [
+        {
+          type: 'ReturnStatement',
+          return: ast.children[0].jsNode
+        }
+      ]
+    }
+  }
+}
+
+
+const createStringLiteral = value => {
+  return {
+    type: 'StringLiteral',
+    value
+  }
+}
+
+const createIdentifier = value => {
+  return {
+    type: 'Identifier',
+    value
+  }
+}
+
+const createCallExpression = (callee, args) => {
+  return {
+    type: 'CallExpression',
+    callee: createIdentifier(callee),
+    arguments: args
+  }
+}
+
+const createArrayExpression = (elements) => {
+  return {
+    type: 'ArrayExpression',
+    elements
+  }
+}
+
+
 
 const str = '<div><p>Vue</p><p>Template</p></div>'
 const ast = parse(str)
 transform(ast)
+console.log(ast.jsNode)
