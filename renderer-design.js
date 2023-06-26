@@ -389,7 +389,7 @@ const createRenderer = (options) => {
       for (let i = oldStartIdx; i <= oldEndIdx; i++) {
         const node = oldChildren[i]
         const index = keyToNewIndexMap[node.key]
-        if (patch > toBePatched) {
+        if (patched > toBePatched) {
           unmount(node)
         } else if (typeof index === 'undefined') {
           unmount(node)
